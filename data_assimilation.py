@@ -138,7 +138,46 @@ def GC_local_func(dist, ROI):
   return coef
 
 ###Smoothers
-def EnSRS(xensA, indA, yoA, obserr, ROIx, ROIt):
+def EnKS_serial(xens, analysis_ind, obs_ind, yo, obserr, ROI, ROIt, alpha):
+  nx, nens, nt = xens.shape
+  nobs, nt = yo.shape
+  xens1 = xens[:, :, analysis_ind].copy()
+  xm = np.mean(xens, axis=1)
+  x = xens.copy()
+  for k in np.arange(nens):
+    x[:, k, :] = x[:, k, :] - xm
+  xb = x.copy()
+  for t in np.arange(nt):
+    for j in np.arange(nobs):
+      dist = np.abs(np.arange(nx) - obs_ind[j])
+      dist = np.minimum(dist, nx - dist)
+      if ROI <= 0:
+        rhox = np.ones(nx)
+      else:
+        rhox = GC_local_func(dist, ROI)
+      dist = np.abs(np.arange(nt) - t)
+      if ROIt <= 0:
+        rhot = np.ones(nt)
+      else:
+        rhot = GC_local_func(dist, ROIt)
+      rho = np.array(np.dot(np.matrix(rhox).T, np.matrix(rhot)))
+      hxm = xm[obs_ind[j], t]
+      hx = np.array(x[obs_ind[j], :, t])
+      varb = np.sum(hx * hx) / (nens - 1)
+      varo = obserr ** 2
+      obs_prior = hx + hxm
+      obs = yo[obs_ind[j], t]
+      SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
+      cov = np.zeros((nx, nt))
+      for k in np.arange(nens):
+        cov += x[:, k, :] * hx[k]
+      cov = cov/(nens - 1)
+      K = cov / (varb + varo)
+      for k in np.arange(nens):
+        x[:, k, :] = x[:, k, :] - SRfac * rho * K * hx[k]
+      xm = xm + rho * K * (obs - hxm)
+  for k in np.arange(nens):
+    xens1[:, k] = alpha*xb[:, k, analysis_ind] + (1-alpha)*x[:, k, analysis_ind] + xm[:, analysis_ind]
   return xens1
 
 
