@@ -1,0 +1,7 @@
+*swp
+*pdf
+*gif
+*pyc
+__pycache__
+output
+err
