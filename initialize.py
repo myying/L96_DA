@@ -24,14 +24,15 @@ for tt in np.arange(nt):
   xt[:, tt+1] = L96.forward(xt[:, tt], nx, F, dt)
 
 # generate observation
-yo = xt + np.random.normal(loc=0.0, scale=obs_err, size=[nx, nt+1])
+yo = xt + np.random.normal(0.0, obs_err, size=[nx, nt+1])
 
 # initial ensemble
+xmean = xt[:, 0] + np.random.normal(0.0, 1.0, size=nx)
 xens = np.zeros((nx, nens))
 for i in np.arange(nens):
-  xens[:, i] = xt[:, 0] + np.random.normal(loc=0.0, scale=0.1, size=[nx])
-  # spin up the ensemble
-  # xens[:, i] = L96.forward(xens[:, i], nx, F, 0.1)
+  xens[:, i] = xmean + np.random.normal(0.0, 1.0, size=[nx])
+# spin up the ensemble
+# xens = L96.forward(xens, p.nx, p.F, 0.5)
 
 # output to data file
 np.save("output/truth", xt)
