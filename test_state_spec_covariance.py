@@ -7,11 +7,11 @@ plt.switch_backend('Agg')
 fig = plt.figure(figsize=(8, 8))
 
 # read in ensemble perturbations
-xens = np.load("output/ensemble_forecast.npy")
+xens = np.load("output/ensemble_forecast.npy")[:, 0:, :]
 nx, nens, nt = xens.shape
 print(xens.shape)
 
-tt = 8
+tt = 40
 xp = np.zeros((nx, nens))
 xm = np.mean(xens[:, :, tt], axis=1)
 for m in range(nens):
@@ -21,7 +21,11 @@ for m in range(nens):
 P = np.matmul(xp, xp.T) / (nens-1)
 
 ax = plt.subplot(321)
-c = ax.imshow(P, cmap='seismic')
+c = ax.contourf(P, np.arange(-20, 21, 1)/1, cmap='seismic')
+ax.set_xticks([0, 9, 19, 29, 39])
+ax.set_xticklabels(['1', '10', '20', '30', '40'])
+ax.set_yticks([0, 9, 19, 29, 39])
+ax.set_yticklabels(['1', '10', '20', '30', '40'])
 plt.colorbar(c)
 
 ax = plt.subplot(323)
@@ -36,7 +40,11 @@ for m in range(nens):
 P1 = np.real(np.matmul(xph, np.conj(xph).T)) / (nens-1)
 
 ax = plt.subplot(322)
-c = ax.imshow(P1, cmap='seismic')
+c = ax.contourf(P1, np.arange(-1000, 1010, 10)/1, cmap='seismic')
+ax.set_xticks([0, 10, 20, 29, 39])
+ax.set_xticklabels(['0', '10', '20', '-11', '-1'])
+ax.set_yticks([0, 10, 20, 29, 39])
+ax.set_yticklabels(['0', '10', '20', '-11', '-1'])
 plt.colorbar(c)
 
 ax = plt.subplot(324)
