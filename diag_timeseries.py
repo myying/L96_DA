@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import numpy as np
 import config as p
 import matplotlib.pyplot as plt
@@ -11,12 +11,12 @@ xens = np.load("output/ensemble_prior.npy")
 xens1 = np.load("output/ensemble_post.npy")
 
 nx, nens, nt = xens.shape
-tt = 95
+tt = 80
 ax = plt.subplot(211)
-plt.plot(xens[:, :, tt], 'c')
-plt.plot(np.mean(xens[:, :, tt], axis=1), 'b')
-plt.plot(p.obs_ind, yo[p.obs_ind, tt], 'rx')
-plt.plot(xt[:, tt], 'k')
+ax.plot(xens1[:, 0:20, tt], 'c')
+ax.plot(np.mean(xens1[:, :, tt], axis=1), 'b')
+ax.plot(p.obs_ind, yo[p.obs_ind, tt], 'rx')
+ax.plot(xt[:, tt], 'k')
 
 ax = plt.subplot(212)
 rmse0 = np.sqrt(np.mean((np.mean(xens0, 1) - xt)**2, 0))
@@ -33,12 +33,12 @@ sprd_out[1:nt*2:2] = sprd1
 time = np.zeros(2*nt)
 time[0:nt*2:2] = np.arange(0, nt)
 time[1:nt*2:2] = np.arange(0, nt)
-plt.plot(time, rmse_out, 'k')
-plt.plot(time, sprd_out, 'g')
-plt.plot(rmse0, 'r')
-plt.plot(np.arange(nt+1), p.obs_err*np.ones(nt+1), color='0.7')
-plt.xlabel('time')
-plt.ylabel('rmse')
+ax.plot(time, rmse_out, 'k')
+ax.plot(time, sprd_out, 'g')
+ax.plot(rmse0, 'r')
+ax.plot(np.arange(nt+1), p.obs_err*np.ones(nt+1), color='0.7')
+ax.set_xlabel('time')
+ax.set_ylabel('rmse')
 
 # xa = np.mean(xens, axis=1)
 # ax = plt.subplot(121)
