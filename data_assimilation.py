@@ -6,6 +6,7 @@ def EnKF(xens, ind, yo, obserr, ROI, alpha):
   xens1 = xens.copy()
   nx, nens = xens.shape
   nobs = ind.size
+  ###observation, perturbed for each member
   R = np.eye(nobs) * (obserr**2)
   H = np.zeros((nobs, nx))
   for j in range(nobs):
@@ -14,19 +15,22 @@ def EnKF(xens, ind, yo, obserr, ROI, alpha):
   obs = np.zeros((nobs, nens))
   for k in range(nens):
     obs[:, k] = yo + np.random.normal(0, obserr, nobs) #perturb observation for members
+  ###prior error covariance
   prior = xens.copy()
   post = xens.copy()
   priormean = np.mean(prior, axis=1)
   postmean = np.mean(post, axis=1)
   Pb = misc.error_covariance(prior)
-  rho = np.ones((nx, nx))
-  if ROI > 0:
-    ii, jj = np.mgrid[0:nx, 0:nx]
-    dist = np.sqrt((ii - jj)**2)
-    dist = np.minimum(dist, nx-dist)
-    for i in range(nx):
-      rho[:, i] = GC_local_func(dist[:, i], ROI)
+  ###localization
+  rho = np.zeros((nx, nx))
+  ii, jj = np.mgrid[0:nx, 0:nx]
+  dist = np.sqrt((ii - jj)**2)
+  dist = np.minimum(dist, nx-dist)
+  for i in range(nx):
+    rho[:, i] = GC_local_func(dist[:, i], ROI)
+  ###Kalman gain
   K = np.dot(np.dot(Pb*rho, H.T), np.linalg.inv(np.dot(np.dot(H, Pb*rho), H.T) + R))
+  ###update
   for k in range(nens):
     post[:, k] = prior[:, k] + np.dot(K, (obs[:, k] - np.dot(H, prior[:, k])))
   for k in range(nens):  #relaxation
@@ -46,10 +50,7 @@ def EnKF_serial(xens, ind, yo, obserr, ROI, alpha, filter_kind):
   for j in np.arange(nobs):
     dist = np.abs(np.arange(nx) - ind[j])
     dist = np.minimum(dist, nx - dist)
-    if (ROI <= 0):
-      rho = np.ones(nx)
-    else:
-      rho = GC_local_func(dist, ROI)
+    rho = GC_local_func(dist, ROI)
     hxm = xm[ind[j]]
     hx = np.array(x[ind[j], :])
     varb = np.sum(hx * hx) / (nens - 1)
@@ -109,10 +110,7 @@ def EnSRF_spec(xhens, ind, yo, obserr, ROI):
     SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
     cov = np.array(np.matrix(xh) * np.matrix(hx).T) / (nens - 1)
     K = cov[:, 0] / (varb + varo)
-    if (ROI <= 0):
-      rho = np.ones(nx)
-    else:
-      rho = GC_local_func(dist, ROI)
+    rho = GC_local_func(dist, ROI)
     rhoh = misc.grid2spec(rho)
     xh = xh - SRfac * np.array(np.matrix(misc.spec_convolve(rhoh, K)).T *
                    np.matrix(hx))
@@ -125,16 +123,19 @@ def EnSRF_spec(xhens, ind, yo, obserr, ROI):
 def GC_local_func(dist, ROI):
   nx = dist.size
   coef = np.zeros(nx)
-  for i in np.arange(nx):
-    r = dist[i] / (0.5 * ROI)
-    if (r >= 2):
-      coef[i] = 0.0
-    elif (r >= 1 and r < 2):
-      coef[i] = ((((r / 12.0 - 0.5) * r + 0.625) * r + 5.0 / 3.0) *
-             r - 5.0) * r + 4.0 - 2.0 / (3.0 * r)
-    else:
-      coef[i] = (((-0.25 * r + 0.5) * r + 0.625) * r -
-             5.0 / 3.0) * (r ** 2) + 1.0
+  if ROI <= 0:
+    coef[:] = 1.0
+  else:
+    for i in np.arange(nx):
+      r = dist[i] / (0.5 * ROI)
+      if (r >= 2):
+        coef[i] = 0.0
+      elif (r >= 1 and r < 2):
+        coef[i] = ((((r / 12.0 - 0.5) * r + 0.625) * r + 5.0 / 3.0) *
+               r - 5.0) * r + 4.0 - 2.0 / (3.0 * r)
+      else:
+        coef[i] = (((-0.25 * r + 0.5) * r + 0.625) * r -
+               5.0 / 3.0) * (r ** 2) + 1.0
   return coef
 
 ###Smoothers
@@ -151,15 +152,9 @@ def EnKS_serial(xens, analysis_ind, obs_ind, yo, obserr, ROI, ROIt, alpha):
     for j in np.arange(nobs):
       dist = np.abs(np.arange(nx) - obs_ind[j])
       dist = np.minimum(dist, nx - dist)
-      if ROI <= 0:
-        rhox = np.ones(nx)
-      else:
-        rhox = GC_local_func(dist, ROI)
+      rhox = GC_local_func(dist, ROI)
       dist = np.abs(np.arange(nt) - t)
-      if ROIt <= 0:
-        rhot = np.ones(nt)
-      else:
-        rhot = GC_local_func(dist, ROIt)
+      rhot = GC_local_func(dist, ROIt)
       rho = np.array(np.dot(np.matrix(rhox).T, np.matrix(rhot)))
       hxm = xm[obs_ind[j], t]
       hx = np.array(x[obs_ind[j], :, t])

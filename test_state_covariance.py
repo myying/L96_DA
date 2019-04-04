@@ -16,17 +16,17 @@ obs = np.load("output/obs.npy")
 nx, nens, nt = prior.shape
 print(prior.shape)
 tt = 24
-nt = 8
-dt = 4
+nt = 3
+cp = 4
 xt = np.zeros(nx*nt)
 xb = np.zeros((nx*nt, nens))
 xa = np.zeros((nx*nt, nens))
 yo = np.zeros(nx*nt)
 for t in range(nt):
-  xt[t*nx:(t+1)*nx] = truth[:, tt+dt*t]
-  yo[t*nx:(t+1)*nx] = obs[:, tt+dt*t]
-  xb[t*nx:(t+1)*nx, :] = prior[:, :, tt+dt*t]
-  xa[t*nx:(t+1)*nx, :] = post[:, :, tt+dt*t]
+  xt[t*nx:(t+1)*nx] = truth[:, tt+cp*t]
+  yo[t*nx:(t+1)*nx] = obs[:, tt+cp*t]
+  xb[t*nx:(t+1)*nx, :] = prior[:, :, tt+cp*t]
+  xa[t*nx:(t+1)*nx, :] = post[:, :, tt+cp*t]
 
 R = np.eye(nx*nt)
 
@@ -34,23 +34,16 @@ R = np.eye(nx*nt)
 ROI = p.ROI
 ROIt = p.ROIt
 rho = np.zeros((nx*nt, nx*nt))
-if ROI <= 0 and ROIt <= 0:
-  # for t in range(nt):
-    # rho[t*nx:(t+1)*nx, :][:, t*nx:(t+1)*nx] = np.ones((nx, nx))
-  rho = np.ones((nx*nt, nx*nt))
-else:
-  ii, jj = np.mgrid[0:nx, 0:nx]
-  dist = np.sqrt((ii - jj)**2)
-  dist = np.minimum(dist, nx - dist)
-  rhoblock = dist.copy()
-  for i in range(nx):
-    rhoblock[:, i] = DA.GC_local_func(dist[:, i], ROI)
-  # for t in range(nt):
-    # rho[t*nx:(t+1)*nx, :][:, t*nx:(t+1)*nx] = rhoblock
-  for t in range(nt):
-   for s in range(nt):
-     tdist = np.abs(t-s)
-     rho[t*nx:(t+1)*nx, :][:, s*nx:(s+1)*nx] = rhoblock * DA.GC_local_func(np.array([tdist]), ROIt)
+ii, jj = np.mgrid[0:nx, 0:nx]
+dist = np.sqrt((ii - jj)**2)
+dist = np.minimum(dist, nx - dist)
+rhoblock = dist.copy()
+for i in range(nx):
+  rhoblock[:, i] = DA.GC_local_func(dist[:, i], ROI)
+for t in range(nt):
+ for s in range(nt):
+   tdist = np.abs(t-s)
+   rho[t*nx:(t+1)*nx, :][:, s*nx:(s+1)*nx] = rhoblock * DA.GC_local_func(np.array([tdist]), ROIt)
 
 Pb = misc.error_covariance(xb) * rho
 Pa = misc.error_covariance(xa) * rho
@@ -68,17 +61,18 @@ print(np.sqrt(np.trace(Pa)/nt/nx))
 print(np.sqrt(np.trace(Pa1)/nt/nx))
 
 ###compare P from different estimates
+clevel = np.arange(-1, 1, 0.02)
 ax = plt.subplot(231)
-c = ax.contourf(Pb, np.arange(-2, 2, 0.1)/50, cmap='seismic')
+c = ax.contourf(Pb, clevel, cmap='seismic')
 ax.set_title(r'$\rho \circ P_b = U \Lambda_b^2 U^T$')
 ax = plt.subplot(232)
-c = ax.contourf(Pa, np.arange(-2, 2, 0.1)/50, cmap='seismic')
+c = ax.contourf(Pa, clevel, cmap='seismic')
 ax.set_title(r'$\rho \circ P_a = U \Lambda_a^2 U^T$')
 ax = plt.subplot(234)
-c = ax.contourf(Pa1, np.arange(-2, 2, 0.1)/50, cmap='seismic')
+c = ax.contourf(Pa1, clevel, cmap='seismic')
 ax.set_title(r'$U (\Lambda_b^{-2}+\Lambda_o^{-2})^{-1} U^T$')
 ax = plt.subplot(235)
-c = ax.contourf(Pa2, np.arange(-2, 2, 0.1)/50, cmap='seismic')
+c = ax.contourf(Pa2, clevel, cmap='seismic')
 ax.set_title(r'$[(\rho \circ P_b)^{-1}+R^{-1}]^{-1}$')
 
 ###plot eigenvalue spectrum
