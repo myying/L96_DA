@@ -18,17 +18,14 @@ oberr = p.obs_err
 
 # assimilation cycle
 for tt in np.arange(p.nt):
-  print(tt)
-
   # analysis
   if(np.mod(tt, p.cycle_period) == 0):
     # xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha)
     xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha, filter_kind=2)
 
   # forecast
-  for i in np.arange(p.nens):
-    xens1[:, i, tt+1] = L96.forward(xens1[:, i, tt], p.nx, p.F, p.dt)
-    xens[:, i, tt+1] = L96.forward(xens1[:, i, tt], p.nx, p.F, p.dt)
+  xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
+  xens[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
 
 np.save("output/ensemble_prior", xens)
 np.save("output/ensemble_post", xens1)
