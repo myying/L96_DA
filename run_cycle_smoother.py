@@ -15,11 +15,10 @@ xens[:, :, 0] = xens0[:, 0:p.nens]
 xens1 = np.copy(xens)
 
 oberr = p.obs_err
-tw = 2 ##smoother analysis window (+-cycles)
+tw = p.time_window
 
 # assimilation cycle
 for tt in np.arange(p.nt):
-  print(tt)
   # analysis step
   if(np.mod(tt, p.cycle_period) == 0):
     t1 = max(0, tt-tw*p.cycle_period)
@@ -32,15 +31,13 @@ for tt in np.arange(p.nt):
     for n in np.arange(t1, tt+1):
       xens2[:, :, n] = xens1[:, :, n]
     for n in np.arange(tt, t2):
-      for i in np.arange(p.nens):
-        xens2[:, i, n+1] = L96.forward(xens2[:, i, n], p.nx, p.F, p.dt)
+      xens2[:, :, n+1] = L96.forward(xens2[:, :, n], p.nx, p.F, p.dt)
     #run smoother
     xens1[:, :, tt] = DA.EnKS_serial(xens2[:, :, t_ind], analysis_ind, p.obs_ind, yo[:, t_ind], oberr, p.ROI, p.ROIt, p.alpha)
 
   # forecast to next cycle
-  for i in np.arange(p.nens):
-    xens1[:, i, tt+1] = L96.forward(xens1[:, i, tt], p.nx, p.F, p.dt)
-    xens[:, i, tt+1] = L96.forward(xens1[:, i, tt], p.nx, p.F, p.dt)
+  xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
+  xens[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
 
 np.save("output/ensemble_prior", xens)
 np.save("output/ensemble_post", xens1)
