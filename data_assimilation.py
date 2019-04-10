@@ -19,9 +19,10 @@ def EnKF(xens, ind, yo, obserr, L, ROI, alpha):
   for j in range(nobs):
     H[j, ind[j]] = 1.0
   np.random.seed(0)
+  #perturb observation for members
   obs = np.zeros((nobs, nens))
   for k in range(nens):
-    obs[:, k] = yo + np.random.normal(0, obserr, nobs) #perturb observation for members
+    obs[:, k] = yo + np.random.multivariate_normal(np.zeros(nx), R)
   ###prior error covariance
   prior = xens.copy()
   post = xens.copy()
