@@ -14,14 +14,15 @@ xens = np.zeros([p.nx, p.nens, p.nt+1])
 xens[:, :, 0] = xens0[:, 0:p.nens]
 xens1 = np.copy(xens)
 
-oberr = p.obs_err
-
 # assimilation cycle
 for tt in np.arange(p.nt):
   # analysis
   if(np.mod(tt, p.cycle_period) == 0):
-    # xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha)
-    xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha, filter_kind=2)
+    ##adaptive inflation
+    # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr)
+
+    xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.L, p.ROI, p.alpha)
+    #xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha, filter_kind=2)
 
   # forecast
   xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)

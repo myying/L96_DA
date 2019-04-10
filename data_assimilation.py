@@ -2,12 +2,19 @@ import numpy as np
 import misc
 
 ##perturbed obs EnKF, full matrix version
-def EnKF(xens, ind, yo, obserr, ROI, alpha):
+def EnKF(xens, ind, yo, obserr, L, ROI, alpha):
   xens1 = xens.copy()
   nx, nens = xens.shape
   nobs = ind.size
   ###observation, perturbed for each member
-  R = np.eye(nobs) * (obserr**2)
+  ii, jj = np.mgrid[0:nx, 0:nx]
+  dist = np.sqrt((ii-jj)**2)
+  dist = np.minimum(dist, nx-dist)
+  if L <= 0:
+    corr = np.eye(nx)
+  else:
+    corr = np.exp(-dist/L)
+  R = corr * obserr**2
   H = np.zeros((nobs, nx))
   for j in range(nobs):
     H[j, ind[j]] = 1.0
@@ -204,3 +211,21 @@ def optical_flow(f1, f2, nlevel):
     q += misc.sharpen(dq*2**lev, lev)
   return u, q
 
+
+###adaptive inflation
+def adaptive_inflation(xb, ind, yo, obserr):
+  nx, nens = xb.shape
+  xb_inf = xb.copy()
+  xbmean = np.mean(xb, axis=1)
+  hxbmean = np.mean(xb[ind, :], axis=1)
+  omb = yo - hxbmean
+  varb = np.zeros(nx)
+  for k in range(nens):
+    varb += (xb[ind, k] - hxbmean)**2
+  varb = varb/(nens-1)
+  varo = obserr**2
+  inf_factor = np.maximum(1.0, np.sqrt((np.maximum(0.0, np.mean(omb*omb) - varo))/np.mean(varb)))
+  #print('inflation = {}'.format(inf_factor))
+  for k in range(nens):
+    xb_inf[:, k] = inf_factor*(xb[:, k] - xbmean) + xbmean
+  return xb_inf
