@@ -8,17 +8,9 @@ from scipy.fftpack import fft
 plt.switch_backend('Agg')
 plt.figure(figsize=(3, 3))
 # plt.figure(figsize=(12, 7))
-nx = p.nx
-##Fourier basis
-v = np.zeros((nx, nx))
-v[:, 0] = 1.0/np.sqrt(nx)
-ii = np.mgrid[0:nx]
-for n in range(1, nx, 2):
-  v[:, n] = np.cos(np.pi*(n+1)*ii/nx)/np.sqrt(nx/2)
-for n in range(2, nx, 2):
-  v[:, n] = -np.sin(np.pi*n*ii/nx)/np.sqrt(nx/2)
-v[:, -1] = np.cos(np.pi*ii)/np.sqrt(nx)
 
+nx = p.nx
+v = misc.fourier_basis(nx)
 
 ax = plt.subplot(111)
 for L in [0, 2, 5, 10]:

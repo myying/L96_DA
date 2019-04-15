@@ -101,11 +101,20 @@ def sharpen(f, level):
     f = f2
   return f
 
-#spacetime spectrum
-def pwrspec(var):
-  return pwr
+###Fourier basis
+def fourier_basis(nx):
+  v = np.zeros((nx, nx))
+  v[:, 0] = 1.0/np.sqrt(nx)
+  ii = np.mgrid[0:nx]
+  for n in range(1, nx, 2):
+    v[:, n] = np.cos(np.pi*(n+1)*ii/nx)/np.sqrt(nx/2)
+  for n in range(2, nx, 2):
+    v[:, n] = -np.sin(np.pi*n*ii/nx)/np.sqrt(nx/2)
+  v[:, -1] = np.cos(np.pi*ii)/np.sqrt(nx)
+  return v
 
 
+###ensemble estimated error covariance
 def ens_pert(xens):
   nx, nens = xens.shape
   xp = np.zeros((nx, nens))
