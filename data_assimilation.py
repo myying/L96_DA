@@ -1,23 +1,13 @@
 import numpy as np
 import misc
 
-##perturbed obs EnKF, full matrix version
-def EnKF(xens, ind, yo, obserr, L, ROI, alpha):
-  xens1 = xens.copy()
+##perturbed obs EnKF/S, full matrix version
+def EnKF(xens, ind, yo, obserr, L, corr_kind, ROI, alpha):
   nx, nens = xens.shape
   nobs = ind.size
   ###observation, perturbed for each member
-  ii, jj = np.mgrid[0:nx, 0:nx]
-  dist = np.sqrt((ii-jj)**2)
-  dist = np.minimum(dist, nx-dist)
-  if L <= 0:
-    corr = np.eye(nx)
-  else:
-    corr = np.exp(-dist/L)
-  R = corr * obserr**2
-  H = np.zeros((nobs, nx))
-  for j in range(nobs):
-    H[j, ind[j]] = 1.0
+  R = R_matrix(nx, 1, ind, obserr, L, 0, corr_kind)
+  H = H_matrix(nx, 1, ind)
   np.random.seed(0)
   #perturb observation for members
   obs = np.zeros((nobs, nens))
@@ -25,9 +15,7 @@ def EnKF(xens, ind, yo, obserr, L, ROI, alpha):
     obs[:, k] = yo + np.random.multivariate_normal(np.zeros(nx), R)
   ###prior error covariance
   prior = xens.copy()
-  post = xens.copy()
   priormean = np.mean(prior, axis=1)
-  postmean = np.mean(post, axis=1)
   Pb = misc.error_covariance(prior)
   ###localization
   rho = np.zeros((nx, nx))
@@ -39,11 +27,13 @@ def EnKF(xens, ind, yo, obserr, L, ROI, alpha):
   ###Kalman gain
   K = np.dot(np.dot(Pb*rho, H.T), np.linalg.inv(np.dot(np.dot(H, Pb*rho), H.T) + R))
   ###update
+  post = prior.copy()
   for k in range(nens):
     post[:, k] = prior[:, k] + np.dot(K, (obs[:, k] - np.dot(H, prior[:, k])))
+  postmean = np.mean(post, axis=1)
   for k in range(nens):  #relaxation
-    xens1[:, k] = alpha*(prior[:, k]-priormean) + (1-alpha)*(post[:, k]-postmean) + postmean
-  return xens1
+    post[:, k] = alpha*(prior[:, k]-priormean) + (1-alpha)*(post[:, k]-postmean) + postmean
+  return post
 
 ##serial EnKF, assimilates obs one at a time
 def EnKF_serial(xens, ind, yo, obserr, ROI, alpha, filter_kind):
@@ -146,7 +136,116 @@ def GC_local_func(dist, ROI):
                5.0 / 3.0) * (r ** 2) + 1.0
   return coef
 
+def local_matrix(nx, nt, ROI, ROIt):
+  rho = np.zeros((nx*nt, nx*nt))
+  ii, jj = np.mgrid[0:nx, 0:nx]
+  dist = np.sqrt((ii - jj)**2)
+  dist = np.minimum(dist, nx - dist)
+  rhoblock = dist.copy()
+  for i in range(nx):
+    rhoblock[:, i] = GC_local_func(dist[:, i], ROI)
+  for t in range(nt):
+    for s in range(nt):
+      tdist = np.abs(t-s)
+      rho[t*nx:(t+1)*nx, :][:, s*nx:(s+1)*nx] = rhoblock * GC_local_func(np.array([tdist]), ROIt)
+  return rho
+
+def R_matrix(nx, nt, obs_ind, obs_err, L, Lt, corr_kind):
+  nobs = obs_ind.size
+  R = np.zeros((nobs*nt, nobs*nt))
+  ii, jj = np.mgrid[0:nx, 0:nx]
+  dist = np.sqrt((ii[obs_ind, :][:, obs_ind]-jj[obs_ind, :][:, obs_ind])**2)
+  dist = np.minimum(dist, nx-dist)
+  if L <= 0:
+    corr = np.eye(nobs)
+  else:
+    if corr_kind == 1:
+      corr = np.exp(-dist/L)
+    if corr_kind == 2:
+      corr = np.cos(np.pi*dist/L) * np.exp(-dist/L)
+    else:
+      corr = np.exp(-dist/L)
+  if Lt <= 0:
+    for t in range(nt):
+      R[t*nobs:(t+1)*nobs, :][:, t*nobs:(t+1)*nobs] = obs_err**2 * corr
+  else:
+    for t in range(nt):
+      for s in range(nt):
+        tdist = np.abs(t-s)
+        R[t*nobs:(t+1)*nobs, :][:, s*nobs:(s+1)*nobs] = obs_err**2 * corr * np.exp(-tdist/Lt)
+  return R
+
+def H_matrix(nx, nt, obs_ind):
+  nobs = obs_ind.size
+  H = np.zeros((nobs*nt, nx*nt))
+  for t in range(nt):
+    for j in range(nobs):
+      H[t*nobs+j, t*nx+obs_ind[j]] = 1.0
+  return H
+
 ###Smoothers
+def EnKS(xens, analysis_ind, obs_ind, yo, obserr, L, Lt, ROI, ROIt, alpha):
+  nx, nens, nt = xens.shape
+  nobs = obs_ind.size
+  ##time-space state
+  prior = np.zeros((nx*nt, nens))
+  for t in range(nt):
+    prior[t*nx:(t+1)*nx, :] = xens[:, :, t]
+  ###observation, perturbed for each member
+  R = np.zeros((nobs*nt, nobs*nt))
+  ii, jj = np.mgrid[0:nx, 0:nx]
+  dist = np.sqrt((ii[obs_ind, :][:, obs_ind]-jj[obs_ind, :][:, obs_ind])**2)
+  dist = np.minimum(dist, nx-dist)
+  if L <= 0:
+    corr = np.eye(nobs)
+  else:
+    corr = np.exp(-dist/L)
+  if Lt <= 0:
+    for t in range(nt):
+      R[t*nobs:(t+1)*nobs, :][:, t*nobs:(t+1)*nobs] = obserr**2 * corr
+  else:
+    for t in range(nt):
+      for s in range(nt):
+        tdist = np.abs(t-s)
+        R[t*nobs:(t+1)*nobs, :][:, s*nobs:(s+1)*nobs] = obserr**2 * corr * np.exp(-tdist/Lt)
+  H = np.zeros((nobs*nt, nx*nt))
+  for t in range(nt):
+    for j in range(nobs):
+      H[t*nobs+j, t*nx+obs_ind[j]] = 1.0
+  np.random.seed(0)
+  #perturb observation for members
+  obs0 = np.zeros((nobs*nt))
+  for t in range(nt):
+    obs0[t*nobs:(t+1)*nobs] = yo[:, t]
+  obs = np.zeros((nobs*nt, nens))
+  for k in range(nens):
+    obs[:, k] = obs0 + np.random.multivariate_normal(np.zeros(nobs*nt), R)
+  ###prior error covariance
+  priormean = np.mean(prior, axis=1)
+  Pb = misc.error_covariance(prior)
+  ###localization
+  rho = np.zeros((nx*nt, nx*nt))
+  ii, jj = np.mgrid[0:nx, 0:nx]
+  dist = np.sqrt((ii - jj)**2)
+  dist = np.minimum(dist, nx-dist)
+  rhoblock = dist.copy()
+  for i in range(nx):
+    rhoblock[:, i] = GC_local_func(dist[:, i], ROI)
+  for t in range(nt):
+    for s in range(nt):
+      tdist = np.abs(t-s)
+      rho[t*nx:(t+1)*nx, :][:, s*nx:(s+1)*nx] = rhoblock * GC_local_func(np.array([tdist]), ROIt)
+  ###Kalman gain
+  K = np.dot(np.dot(Pb*rho, H.T), np.linalg.inv(np.dot(np.dot(H, Pb*rho), H.T) + R))
+  ###update
+  post = prior.copy()
+  for k in range(nens):
+    post[:, k] = prior[:, k] + np.dot(K, (obs[:, k] - np.dot(H, prior[:, k])))
+  postmean = np.mean(post, axis=1)
+  for k in range(nens):  #relaxation
+    post[:, k] = alpha*(prior[:, k]-priormean) + (1-alpha)*(post[:, k]-postmean) + postmean
+  return post[analysis_ind*nx:(analysis_ind+1)*nx, :]
+
 def EnKS_serial(xens, analysis_ind, obs_ind, yo, obserr, ROI, ROIt, alpha):
   nx, nens, nt = xens.shape
   nobs, nt = yo.shape

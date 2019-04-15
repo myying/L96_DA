@@ -2,6 +2,7 @@
 import numpy as np
 import L96_model as L96
 import config as p
+import data_assimilation as DA
 
 np.random.seed(0)
 
@@ -9,8 +10,6 @@ nx = p.nx
 F = p.F
 dt = p.dt
 nt = p.nt
-obs_err = p.obs_err
-L = p.L
 nens = p.nens
 
 xt = np.zeros((nx, nt+1))  # truth
@@ -26,19 +25,14 @@ for tt in np.arange(nt):
   # run model
   xt[:, tt+1] = L96.forward(xt[:, tt], nx, F, dt)
 
-# generate observation
-#yo = xt + np.random.normal(0.0, obs_err, size=[nx, nt+1])
+## generate observation
 ##true R matrix with correlation scale L and variance obs_err**2
-ii, jj = np.mgrid[0:nx, 0:nx]
-dist = np.sqrt((ii-jj)**2)
-dist = np.minimum(dist, nx-dist)
-if L <= 0:
-  corr = np.eye(nx)
-else:
-  corr = np.exp(-dist/L)
-R = corr * obs_err**2
+R = DA.R_matrix(nx, 1, p.obs_ind, p.obs_err, p.L, 0, p.corr_kind)
 for t in np.arange(nt):
   yo[:, t] = xt[:, t] + np.random.multivariate_normal(np.zeros(nx), R)
+# err = np.random.multivariate_normal(np.zeros(nx*nt), R)
+# for t in range(nt):
+#   yo[:, t] = xt[:, t] + err[t*nx:(t+1)*nx]
 
 # initial ensemble
 xmean = xt[:, 0] + np.random.normal(0.0, 1.0, size=nx)

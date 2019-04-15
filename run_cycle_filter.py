@@ -19,9 +19,9 @@ for tt in np.arange(p.nt):
   # analysis
   if(np.mod(tt, p.cycle_period) == 0):
     ##adaptive inflation
-    # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr)
+    # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
 
-    xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.L, p.ROI, p.alpha)
+    xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.L, p.corr_kind, p.ROI, p.alpha)
     #xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha, filter_kind=2)
 
   # forecast

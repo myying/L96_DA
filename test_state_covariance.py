@@ -6,18 +6,20 @@ import config as p
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft
 plt.switch_backend('Agg')
-plt.figure(figsize=(12, 7))
+plt.figure(figsize=(3, 3))
+# plt.figure(figsize=(12, 7))
 
 # read in obs and prior ensemble
 truth = np.load("output/truth.npy")
 prior = np.load("output/ensemble_prior.npy")
 post = np.load("output/ensemble_post.npy")
 obs = np.load("output/obs.npy")
-nx, nens, nt = prior.shape
+nx, nens, nt1 = prior.shape
+nt1 = 500
 # print(prior.shape)
-tt = 12
+tt = 64
 nt = 1
-cp = 4
+cp = p.cycle_period
 xt = np.zeros(nx*nt)
 xb = np.zeros((nx*nt, nens))
 xa = np.zeros((nx*nt, nens))
@@ -28,42 +30,22 @@ for t in range(nt):
   xb[t*nx:(t+1)*nx, :] = prior[:, :, tt+cp*t]
   xa[t*nx:(t+1)*nx, :] = post[:, :, tt+cp*t]
 
-##loalization
-ROI = p.ROI
-ROIt = p.ROIt
-rho = np.zeros((nx*nt, nx*nt))
-ii, jj = np.mgrid[0:nx, 0:nx]
-dist = np.sqrt((ii - jj)**2)
-dist = np.minimum(dist, nx - dist)
-rhoblock = dist.copy()
-for i in range(nx):
-  rhoblock[:, i] = DA.GC_local_func(dist[:, i], ROI)
-for t in range(nt):
-  for s in range(nt):
-    tdist = np.abs(t-s)
-    rho[t*nx:(t+1)*nx, :][:, s*nx:(s+1)*nx] = rhoblock * DA.GC_local_func(np.array([tdist]), ROIt)
-
 ###covariance matrices
-nobs = p.obs_ind.size
-L = 0
-if L<=0:
-  corr = np.eye(nx)
-else:
-  corr = np.exp(-dist/L)
-  # corr = (1+dist/L) * np.exp(-dist/L)  #SOAR
-  # corr = np.cos(np.pi*dist/L) * np.exp(-dist/L)
-R = corr * p.obs_err**2
-H = np.eye(nx*nt)[p.obs_ind, :]
+R = DA.R_matrix(nx, nt, p.obs_ind, p.obs_err, p.L, p.Lt, p.corr_kind)
+Rt = DA.R_matrix(nx, nt, p.obs_ind, p.obs_err, 5, 0, 2)
+H = DA.H_matrix(nx, nt, p.obs_ind)
 HTRinvH = np.dot(H.T, np.dot(np.linalg.inv(R), H))
-Pb = misc.error_covariance(xb) * rho
-Pa = misc.error_covariance(xa) * rho
-# Pb = np.zeros((nx, nx))
-# Pa = np.zeros((nx, nx))
-# for t in range(0, nt, 4):
-  # Pb += misc.error_covariance(prior[:, :, t]) * rho
-  # Pa += misc.error_covariance(post[:, :, t]) * rho
-# Pb = Pb/nt
-# Pa = Pa/nt
+HTRtinvH = np.dot(H.T, np.dot(np.linalg.inv(Rt), H))
+rho = DA.local_matrix(nx, nt, p.ROI, p.ROIt)  ##loalization
+# Pb = misc.error_covariance(xb) * rho
+# Pa = misc.error_covariance(xa) * rho
+Pb = np.zeros((nx, nx))
+Pa = np.zeros((nx, nx))
+for t in range(0, nt1, cp):
+  Pb += misc.error_covariance(prior[:, :, t]) * rho
+  Pa += misc.error_covariance(post[:, :, t]) * rho
+Pb = Pb/(nt1/cp)
+Pa = Pa/(nt1/cp)
 # w, v = np.linalg.eig(R)
 # Rsqinv = np.dot(v, np.dot(np.diag(w**-0.5), v.T))
 # w, v = np.linalg.eig(Pb)
@@ -71,56 +53,68 @@ Pa = misc.error_covariance(xa) * rho
 # Pbsqinv = np.dot(v, np.dot(np.diag(w**-0.5), v.T))
 # M = np.dot(Rsqinv, np.dot(H, Pbsq))
 
-#canonical correlation analysis
-w, v = np.linalg.eig(np.exp(-dist/1))
-# u, s, v = np.linalg.svd(M)
-wb = np.diag(np.dot(v.T, np.dot(Pb, v)))
-wa = np.diag(np.dot(v.T, np.dot(Pa, v)))
+##actual error matrices
+eb = np.mean(prior, axis=1) - truth
+ea = np.mean(post, axis=1) - truth
+Qb = np.dot(eb[:, ::cp], eb[:, ::cp].T)/(nt1/cp)
+Qa = np.dot(ea[:, ::cp], ea[:, ::cp].T)/(nt1/cp)
+print('prior rmse = {}, sprd = {}'.format(np.sqrt(np.mean(np.diag(Qb))), np.sqrt(np.mean(np.diag(Pb)))))
+print('post rmse = {}, sprd = {}'.format(np.sqrt(np.mean(np.diag(Qa))), np.sqrt(np.mean(np.diag(Pa)))))
+
+##Fourier basis
+v = np.zeros((nx, nx))
+v[:, 0] = 1.0/np.sqrt(nx)
+ii = np.mgrid[0:nx]
+for n in range(1, nx, 2):
+  v[:, n] = np.cos(np.pi*(n+1)*ii/nx)/np.sqrt(nx/2)
+for n in range(2, nx, 2):
+  v[:, n] = -np.sin(np.pi*n*ii/nx)/np.sqrt(nx/2)
+v[:, -1] = np.cos(np.pi*ii)/np.sqrt(nx)
+
+Wb = np.dot(v.T, np.dot(Pb, v))
+Wa = np.dot(v.T, np.dot(Pa, v))
 wo = np.diag(np.dot(v.T, np.dot(HTRinvH, v))) **-1
-wa1 = np.real((wo**-1 + wb**-1)**-1)
-# print(wa[0:nx])
-# print(wa1[0:nx])
+wot = np.diag(np.dot(v.T, np.dot(HTRtinvH, v))) **-1
+Wb1 = np.dot(v.T, np.dot(Qb, v))
+Wa1 = np.dot(v.T, np.dot(Qa, v))
+# Wa1 = np.linalg.inv(np.diag(wo**-1) + np.linalg.inv(Wb))
 
 ###compare P from different estimates
-clevel = np.arange(-1, 1.02, 0.02)
-ax = plt.subplot(231)
-c = ax.contourf(Pb, clevel, cmap='seismic')
-#ax.set_title(r'$P_b = U \Lambda_b^2 U^T$')
-#ax.set_xticks(np.arange(0, nx*nt, nx))
-#ax.set_yticks(np.arange(0, nx*nt, nx))
-ax = plt.subplot(232)
-c = ax.contourf(R, clevel, cmap='seismic')
+# clevel = np.arange(-3, 3.1, 0.1)
+# ax = plt.subplot(231)
+# c = ax.contourf(Pb, clevel, cmap='seismic')
+# ax.set_title(r'$P_b = U \Lambda_b^2 U^T$')
+# ax = plt.subplot(232)
+# c = ax.contourf(Qb, clevel, cmap='seismic')
+# ax.set_title(r'$\tilde{P}_b = U \tilde{\Lambda}_b^2 U^T$')
+# ax = plt.subplot(234)
 # c = ax.contourf(Pa, clevel, cmap='seismic')
-# ax.set_title(r'$P_a = U \Lambda_a^2 U^T$')
-# ax.set_xticks(np.arange(0, nx*nt, nx))
-# ax.set_yticks(np.arange(0, nx*nt, nx))
-ax = plt.subplot(234)
-c = ax.contourf(np.dot(v.T, np.dot(Pb, v)), clevel, cmap='seismic')
-# ax.set_title(r'$U (\Lambda_b^{-2}+\Lambda_o^{-2})^{-1} U^T$')
-# ax.set_xticks(np.arange(0, nx*nt, nx))
-# ax.set_yticks(np.arange(0, nx*nt, nx))
-ax = plt.subplot(235)
-c = ax.contourf(np.dot(v.T, np.dot(R, v)), clevel, cmap='seismic')
+# ax.set_title(r'$P^a = U \Lambda_a^2 U^T$')
+# ax = plt.subplot(235)
+# c = ax.contourf(Qa, clevel, cmap='seismic')
+# ax.set_title(r'$\tilde{P}_a = U \tilde{\Lambda}_a^2 U^T$')
 # ax.set_title(r'$[P_b^{-1}+H^TR^{-1}H]^{-1}$')
 # ax.set_xticks(np.arange(0, nx*nt, nx))
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
 ###plot eigenvalue spectrum
-ax = plt.subplot(233)
-ax.plot(np.sqrt(wb), 'k', label=r'$\Lambda_b$')
-ax.plot(np.sqrt(wo), 'c', label=r'$\Lambda_o$')
-ax.plot(np.sqrt(wa), 'r', label=r'$\Lambda_a$')
-ax.plot(np.sqrt(wa1), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
-# ax.legend(fontsize=12)
-# ax.set_title('Eigenspectrum')
-ax.set_ylim(0, 5)
+ax = plt.subplot(111)
+ax.plot(np.sqrt(wot[::2]), 'k:', label=r'$\tilde{\Lambda}_o$')
+ax.plot(np.sqrt(wo[::2]), 'k', label=r'$\Lambda_o$')
+ax.plot(np.sqrt(np.diag(Wb1)[::2]), 'b', label=r'$\tilde{\Lambda}_b$')
+ax.plot(np.sqrt(np.diag(Wb)[::2]), 'c', label=r'$\Lambda_b$')
+ax.plot(np.sqrt(np.diag(Wa1)[::2]), 'r', label=r'$\tilde{\Lambda}_a$')
+ax.plot(np.sqrt(np.diag(Wa)[::2]), 'g', label=r'$\Lambda_a$')
+# ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
+ax.legend(fontsize=10)
+ax.set_ylim(0, 3)
+ax.set_xlabel('wavenumber')
 
 ###plot eigenvectors
-ax = plt.subplot(236)
-# ax.contourf(v.T, clevel, cmap='seismic')
-ax.plot(v[:, 0:10])
+# ax = plt.subplot(236)
+# ax.contourf(v[:, ::2].T, np.arange(-0.3, 0.31, 0.01), cmap='jet')
 # for t in range(nt):
-  # ax.plot(v[t*nx:(t+1)*nx, 0]+t, 'k')
+#   ax.plot(v[t*nx:(t+1)*nx, 0]+t, 'k')
 # for t in range(nt):
 #   ax.plot(v[t*nx:(t+1)*nx, 1]+t, 'r')
 # for t in range(nt):

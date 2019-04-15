@@ -13,7 +13,7 @@ xens1 = np.load("output/ensemble_post.npy")
 nx, nens, nt = xens.shape
 tt = 80
 ax = plt.subplot(211)
-ax.plot(xens1[:, 0:20, tt], 'c')
+ax.plot(xens1[:, 0:100, tt], 'c')
 ax.plot(np.mean(xens1[:, :, tt], axis=1), 'b')
 ax.plot(p.obs_ind, yo[p.obs_ind, tt], 'rx')
 ax.plot(xt[:, tt], 'k')
@@ -46,8 +46,8 @@ ax.set_ylabel('rmse')
 # ax = plt.subplot(122)
 # ax.contourf((xa-xt).T, np.arange(-10, 15, 1))
 
-print(np.mean(rmse[::p.cycle_period]))
-print(np.mean(rmse1[::p.cycle_period]))
+print(np.sqrt(np.mean(rmse[::p.cycle_period]**2)))
+print(np.sqrt(np.mean(rmse1[::p.cycle_period]**2)))
 # err_reduc = rmse1[::p.cycle_period]/rmse[::p.cycle_period]
 # print(np.mean(err_reduc[3:]))
 
