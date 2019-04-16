@@ -16,7 +16,7 @@ v = misc.fourier_basis(nx)
 nsample = 10000
 x = np.zeros((nx, nsample))
 f1 = 0.6
-f2 = 0.0
+f2 = -0.0
 sig = 1
 for n in range(nsample):
   x[0, n] = np.random.normal(0, sig)
@@ -29,21 +29,33 @@ for n in range(nsample):
     # x[i-2, n] = f1*x[i-1, n] + f2*x[i, n] + np.random.normal(0, sig)
 
 R = misc.error_covariance(x)
-R1 = DA.R_matrix(nx, 1, p.obs_ind, np.sqrt(sig**2/(1-f1**2)), 2, 0, 1)
+L = -1/np.log(f1)
+sig1 = np.sqrt(sig**2/(1-f1**2))
+R1 = DA.R_matrix(nx, 1, p.obs_ind, sig1, L, 0, 1)
 print(np.mean(np.diag(R)))
 print(np.mean(np.diag(R1)))
 
 ax = plt.subplot(221)
+##spectrum from simulated R
 wo = np.diag(np.dot(v.T, np.dot(R, v)))
-wo1 = np.diag(np.dot(v.T, np.dot(R1, v)))
 ax.plot(np.sqrt(wo[::2]), 'r')
+##spectrum from theory
+ii = 2*np.pi*np.mgrid[0:int(nx/2)]/nx
+# wo2 = sig**2/(1 + f1**2 - 2*f1*np.cos(ii))  ##AR1
+wo2 = sig**2/(1 + f1**2 + f2**2 - 2*f1*(1-f2)*np.cos(ii) - 2*f2*np.cos(2*ii))  ##AR2
+ax.plot(np.sqrt(wo2), 'b')
+##spectrum from true R
+wo1 = np.diag(np.dot(v.T, np.dot(R1, v)))
 ax.plot(np.sqrt(wo1[::2]), 'k')
 ax.set_ylim(0, 3)
 ax.set_xlabel('wavenumber')
 
 ax = plt.subplot(222)
-ax.plot(R[20, :], 'r')
-ax.plot(R1[20, :], 'k')
+ax.plot(R[20, :], 'r')  ##simulated R
+jj = np.mgrid[0:nx] - 20
+R2 = sig1**2 * np.exp(-np.abs(jj)/L)
+ax.plot(R2, 'b') ##from theory
+ax.plot(R1[20, :], 'k')  ##true R
 ax.set_xlim(0, nx)
 ax.set_ylim(-1, 2)
 ax.set_xlabel('distance')
