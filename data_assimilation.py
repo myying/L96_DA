@@ -2,7 +2,7 @@ import numpy as np
 import misc
 
 ##perturbed obs EnKF/S, full matrix version
-def EnKF(xens, ind, yo, obserr, L, corr_kind, ROI, alpha):
+def EnKF(xens, ind, yo, obserr, L, corr_kind, ROI):
   nx, nens = xens.shape
   nobs = ind.size
   ###observation, perturbed for each member
@@ -30,13 +30,10 @@ def EnKF(xens, ind, yo, obserr, L, corr_kind, ROI, alpha):
   post = prior.copy()
   for k in range(nens):
     post[:, k] = prior[:, k] + np.dot(K, (obs[:, k] - np.dot(H, prior[:, k])))
-  postmean = np.mean(post, axis=1)
-  for k in range(nens):  #relaxation
-    post[:, k] = alpha*(prior[:, k]-priormean) + (1-alpha)*(post[:, k]-postmean) + postmean
   return post
 
 ##serial EnKF, assimilates obs one at a time
-def EnKF_serial(xens, ind, yo, obserr, ROI, alpha, filter_kind):
+def EnKF_serial(xens, ind, yo, obserr, ROI, filter_kind):
   xens1 = xens.copy()
   [nx, nens] = xens.shape
   nobs = ind.size
@@ -72,7 +69,7 @@ def EnKF_serial(xens, ind, yo, obserr, ROI, alpha, filter_kind):
       x = x - SRfac * np.array(np.matrix(rho * K).T * np.matrix(hx))
       xm = xm + rho * K * (obs - hxm)
   for k in np.arange(nens):
-    xens1[:, k] = alpha*xb[:, k] + (1-alpha)*x[:, k] + xm
+    xens1[:, k] = x[:, k] + xm
   return xens1
 
 def obs_inc_EAKF(prior, prior_var, obs, obs_var):
@@ -82,7 +79,7 @@ def obs_inc_EAKF(prior, prior_var, obs, obs_var):
   obs_inc = np.sqrt(var_ratio) * (prior - prior_mean) + new_mean - prior
   return obs_inc
 
-def EnSRF_spec(xens, ind, yo, obserr, ROI, alpha):
+def EnSRF_spec(xens, ind, yo, obserr, ROI):
   xens1 = np.copy(xens)
   nx, nens = xens.shape
   nk = int(nx/2+1)
@@ -187,7 +184,7 @@ def H_matrix(nx, nt, obs_ind):
   return H
 
 ###Smoothers
-def EnKS(xens, analysis_ind, obs_ind, yo, obserr, L, Lt, ROI, ROIt, alpha):
+def EnKS(xens, analysis_ind, obs_ind, yo, obserr, L, Lt, ROI, ROIt):
   nx, nens, nt = xens.shape
   nobs = obs_ind.size
   ##time-space state
@@ -244,12 +241,9 @@ def EnKS(xens, analysis_ind, obs_ind, yo, obserr, L, Lt, ROI, ROIt, alpha):
   post = prior.copy()
   for k in range(nens):
     post[:, k] = prior[:, k] + np.dot(K, (obs[:, k] - np.dot(H, prior[:, k])))
-  postmean = np.mean(post, axis=1)
-  for k in range(nens):  #relaxation
-    post[:, k] = alpha*(prior[:, k]-priormean) + (1-alpha)*(post[:, k]-postmean) + postmean
   return post[analysis_ind*nx:(analysis_ind+1)*nx, :]
 
-def EnKS_serial(xens, analysis_ind, obs_ind, yo, obserr, ROI, ROIt, alpha):
+def EnKS_serial(xens, analysis_ind, obs_ind, yo, obserr, ROI, ROIt):
   nx, nens, nt = xens.shape
   nobs, nt = yo.shape
   xens1 = xens[:, :, analysis_ind].copy()
@@ -282,7 +276,7 @@ def EnKS_serial(xens, analysis_ind, obs_ind, yo, obserr, ROI, ROIt, alpha):
         x[:, k, :] = x[:, k, :] - SRfac * rho * K * hx[k]
       xm = xm + rho * K * (obs - hxm)
   for k in np.arange(nens):
-    xens1[:, k] = alpha*xb[:, k, analysis_ind] + (1-alpha)*x[:, k, analysis_ind] + xm[:, analysis_ind]
+    xens1[:, k] = x[:, k, analysis_ind] + xm[:, analysis_ind]
   return xens1
 
 

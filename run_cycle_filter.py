@@ -16,17 +16,24 @@ xens1 = np.copy(xens)
 
 # assimilation cycle
 for tt in np.arange(p.nt):
-  # analysis
+  # analysis step
   if(np.mod(tt, p.cycle_period) == 0):
-    ##adaptive inflation
+    xb = xens1[:, :, tt].copy()
+
+    ##adaptive prior inflation
     # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
 
-    # xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.L, p.corr_kind, p.ROI, p.alpha)
-    # xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.ROI, p.alpha, filter_kind=2)
-    xens1[:, :, tt] = DA.EnSRF_spec(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.ROI, p.alpha)
+    # xa = DA.EnKF(xb, p.obs_ind, yo[:, tt], p.obs_err, p.L, p.corr_kind, p.ROI)
+    xa = DA.EnKF_serial(xb, p.obs_ind, yo[:, tt], p.obs_err, p.ROI, filter_kind=2)
+    # xa = DA.EnSRF_spec(xb, p.obs_ind, yo[:, tt], p.obs_err, p.ROI)
 
+    ##relaxation
+    xb_mean = np.mean(xb, axis=1)
+    xa_mean = np.mean(xa, axis=1)
+    for k in np.arange(p.nens):
+      xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
 
-  # forecast
+  # forecast step
   xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
   xens[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
 
