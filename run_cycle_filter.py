@@ -21,8 +21,10 @@ for tt in np.arange(p.nt):
     ##adaptive inflation
     # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
 
-    xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.L, p.corr_kind, p.ROI, p.alpha)
-    #xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], oberr, p.ROI, p.alpha, filter_kind=2)
+    # xens1[:, :, tt] = DA.EnKF(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.L, p.corr_kind, p.ROI, p.alpha)
+    # xens1[:, :, tt] = DA.EnKF_serial(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.ROI, p.alpha, filter_kind=2)
+    xens1[:, :, tt] = DA.EnSRF_spec(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err, p.ROI, p.alpha)
+
 
   # forecast
   xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)

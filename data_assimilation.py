@@ -82,10 +82,13 @@ def obs_inc_EAKF(prior, prior_var, obs, obs_var):
   obs_inc = np.sqrt(var_ratio) * (prior - prior_mean) + new_mean - prior
   return obs_inc
 
-def EnSRF_spec(xhens, ind, yo, obserr, ROI):
-  xhens1 = np.copy(xhens)
-  [nk, nens] = xhens.shape
-  nx = (nk-1)*2
+def EnSRF_spec(xens, ind, yo, obserr, ROI, alpha):
+  xens1 = np.copy(xens)
+  nx, nens = xens.shape
+  nk = int(nx/2+1)
+  xhens = np.zeros([nk, nens], dtype=complex)
+  for k in range(nens):
+    xhens[:, k] = misc.grid2spec(xens[:, k])
   nobs = ind.size
   x = np.zeros([nx, nens])
   xm = np.zeros([nx])
@@ -110,12 +113,12 @@ def EnSRF_spec(xhens, ind, yo, obserr, ROI):
     K = cov[:, 0] / (varb + varo)
     rho = GC_local_func(dist, ROI)
     rhoh = misc.grid2spec(rho)
-    xh = xh - SRfac * np.array(np.matrix(misc.spec_convolve(rhoh, K)).T *
-                   np.matrix(hx))
+    xh = xh - SRfac * np.array(np.matrix(misc.spec_convolve(rhoh, K)).T * np.matrix(hx))
     xhm = xhm + misc.spec_convolve(rhoh, K) * (yo[ind[j]] - hxm)
   for k in np.arange(nens):
-    xhens1[:, k] = xh[:, k] + xhm
-  return xhens1
+    xhens[:, k] = xh[:, k] + xhm
+    xens1[:, k] = misc.spec2grid(xhens[:, k])
+  return xens1
 
 
 def GC_local_func(dist, ROI):
