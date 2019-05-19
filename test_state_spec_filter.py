@@ -16,7 +16,7 @@ xens0 = np.load("output/initial_ensemble.npy")
 xens = np.zeros([p.nx, p.nens, p.nt+1])
 xens[:, :, 0] = xens0[:, 0:p.nens]
 xens1 = np.copy(xens)
-xhens = np.zeros([p.nx/2+1, p.nens, p.nt+1], dtype=complex)
+xhens = np.zeros([int(p.nx/2+1), p.nens, p.nt+1], dtype=complex)
 
 # assimilation cycle
 for tt in np.arange(p.nt):
@@ -27,13 +27,13 @@ for tt in np.arange(p.nt):
         xens1[:, :, tt] = DA.EnSRF(xens1[:, :, tt], p.obs_ind,
                                    yo[:, tt], p.obs_err, p.ROI)
 
-        convert to spectral space
+        #convert to spectral space
         for k in np.arange(p.nens):
             xhens[:, k, tt] = misc.grid2spec(xens[:, k, tt])
-        perform DA in spectral space
+        #perform DA in spectral space
         xhens[:, :, tt] = DA.EnSRF_spec(xhens[:, :, tt], p.obs_ind,
                                         yo[:, tt], p.obs_err, p.ROI)
-        convert back to state space
+        #convert back to state space
         for k in np.arange(p.nens):
             xens[:, k, tt] = misc.spec2grid(xhens[:, k, tt])
 
