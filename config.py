@@ -1,14 +1,14 @@
 import numpy as np
 nx = 40
 F = 8.0
-dt = 0.1
-nt = 499
-cycle_period = 2
+dt = 0.2
+nt = 2000
+cycle_period = 1
 time_window = 2 ##smoother analysis window (+-cycles)
 obs_err = 1
-L = 2
-Lt = 0
-corr_kind = 2
+L = 2  #spatial corr in R
+Lt = 0 #temporal corr in R
+corr_kind = 1  #1:AR(1) 2:AR(2)
 obs_thin = 1
 obs_ind = np.arange(0, nx, obs_thin)
 # H = np.eye(nx)
@@ -16,4 +16,4 @@ obs_ind = np.arange(0, nx, obs_thin)
 nens = 20
 ROI = 5  #localization in space (grid points)
 ROIt = 0  #localization in time (cycles)
-alpha = 0.0
+alpha = 0.1

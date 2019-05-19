@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import fft
 plt.switch_backend('Agg')
 plt.figure(figsize=(3, 3))
-# plt.figure(figsize=(12, 7))
 
 # read in obs and prior ensemble
 truth = np.load("output/truth.npy")
@@ -15,24 +14,22 @@ prior = np.load("output/ensemble_prior.npy")
 post = np.load("output/ensemble_post.npy")
 obs = np.load("output/obs.npy")
 nx, nens, nt1 = prior.shape
-nt1 = 500
-# print(prior.shape)
-tt = 64
+tt = 1
 nt = 1
 cp = p.cycle_period
-xt = np.zeros(nx*nt)
-xb = np.zeros((nx*nt, nens))
-xa = np.zeros((nx*nt, nens))
-yo = np.zeros(nx*nt)
-for t in range(nt):
-  xt[t*nx:(t+1)*nx] = truth[:, tt+cp*t]
-  yo[t*nx:(t+1)*nx] = obs[:, tt+cp*t]
-  xb[t*nx:(t+1)*nx, :] = prior[:, :, tt+cp*t]
-  xa[t*nx:(t+1)*nx, :] = post[:, :, tt+cp*t]
+# xt = np.zeros(nx*nt)
+# xb = np.zeros((nx*nt, nens))
+# xa = np.zeros((nx*nt, nens))
+# yo = np.zeros(nx*nt)
+# for t in range(nt):
+#   xt[t*nx:(t+1)*nx] = truth[:, tt+cp*t]
+#   yo[t*nx:(t+1)*nx] = obs[:, tt+cp*t]
+#   xb[t*nx:(t+1)*nx, :] = prior[:, :, tt+cp*t]
+#   xa[t*nx:(t+1)*nx, :] = post[:, :, tt+cp*t]
 
 ###covariance matrices
 R = DA.R_matrix(nx, nt, p.obs_ind, p.obs_err, p.L, p.Lt, p.corr_kind)
-Rt = DA.R_matrix(nx, nt, p.obs_ind, p.obs_err, 5, 0, 2)
+Rt = DA.R_matrix(nx, nt, p.obs_ind, 1, 2, 0, 1)
 H = DA.H_matrix(nx, nt, p.obs_ind)
 HTRinvH = np.dot(H.T, np.dot(np.linalg.inv(R), H))
 HTRtinvH = np.dot(H.T, np.dot(np.linalg.inv(Rt), H))
@@ -92,16 +89,16 @@ Wa1 = np.dot(v.T, np.dot(Qa, v))
 
 ###plot eigenvalue spectrum
 ax = plt.subplot(111)
-ax.plot(np.sqrt(wot[::2]), 'k:', label=r'$\tilde{\Lambda}_o$')
-ax.plot(np.sqrt(wo[::2]), 'k', label=r'$\Lambda_o$')
-ax.plot(np.sqrt(np.diag(Wb1)[::2]), 'b', label=r'$\tilde{\Lambda}_b$')
+ax.plot(np.sqrt(wot[::2]), 'k', label=r'$\Lambda_o$')
+ax.plot(np.sqrt(np.diag(Wb1)[::2]), 'b', label=r'$\Lambda_b$')
+ax.plot(np.sqrt(np.diag(Wa1)[::2]), 'r', label=r'$\Lambda_a$')
+ax.plot(np.sqrt(wo[::2]), 'k:', label=r'$\Lambda_o$')
 ax.plot(np.sqrt(np.diag(Wb)[::2]), 'c', label=r'$\Lambda_b$')
-ax.plot(np.sqrt(np.diag(Wa1)[::2]), 'r', label=r'$\tilde{\Lambda}_a$')
-ax.plot(np.sqrt(np.diag(Wa)[::2]), 'g', label=r'$\Lambda_a$')
+ax.plot(np.sqrt(np.diag(Wa)[::2]), 'y', label=r'$\Lambda_a$')
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
-ax.legend(fontsize=10)
+# ax.legend(fontsize=14, ncol=2)
 ax.set_ylim(0, 3)
-ax.set_xlabel('wavenumber')
+# ax.set_xlabel('wavenumber')
 
 ###plot eigenvectors
 # ax = plt.subplot(236)
