@@ -79,7 +79,7 @@ def obs_inc_EAKF(prior, prior_var, obs, obs_var):
   obs_inc = np.sqrt(var_ratio) * (prior - prior_mean) + new_mean - prior
   return obs_inc
 
-def EnSRF_spec(xens, ind, yo, obserr, ROI):
+def EnSRF_spec(xens, ind, yo, obserr, ROI):  ##old version
   xens1 = np.copy(xens)
   nx, nens = xens.shape
   nk = int(nx/2+1)
@@ -115,6 +115,70 @@ def EnSRF_spec(xens, ind, yo, obserr, ROI):
   for k in np.arange(nens):
     xhens[:, k] = xh[:, k] + xhm
     xens1[:, k] = misc.spec2grid(xhens[:, k])
+  return xens1
+
+def EnSRF_specspec(xens, ind, yo, obserr, L, corr_kind):
+  xens1 = np.copy(xens)
+  nx, nens = xens.shape
+  v = misc.fourier_basis(nx)
+  xhens = np.dot(v.T, xens)
+  xm = np.mean(xhens, axis=1)
+  x = xhens
+  for k in np.arange(nens):
+    x[:, k] = x[:, k] - xm
+  obs = np.dot(v.T, yo)
+  nobs = obs.size
+  R = R_matrix(nx, 1, ind, obserr, L, 0, corr_kind)
+  wo = np.dot(v.T, np.dot(R, v))
+  # assimilation cycle
+  for j in np.arange(nobs):
+    hx = x[j, :]  ###all states observed
+    hxm = xm[j]
+    varb = np.sum(hx**2) / (nens - 1)
+    varo = wo[j, j]
+    SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
+    K = np.dot(x, hx) / (nens-1) / (varb + varo)
+    # rho = np.zeros(nx)
+    # rho[j] = 1.0
+    rho = np.ones(nx)
+    for k in range(nens):
+      x[:, k] = x[:, k] - SRfac * rho * K * hx[k]
+    xm = xm + rho * K * (obs[j] - hxm)
+    for k in range(nens):
+      xens1[:, k] = np.dot(v, x[:, k]+xm)
+  return xens1
+
+def EnSRF_multiscale(xens, ind, yo, obserr, ROI, krange):
+  xens1 = xens.copy()
+  ns = krange.size + 1
+  nobs = ind.size
+  nx, nens = xens.shape
+  x_ms = np.zeros([nx, ns, nens])
+  xm_ms = np.zeros([nx, ns])
+  for s in range(ns):
+    for k in range(nens):
+      x_ms[:, s, k] = misc.spec_bandpass(xens[:, k], krange, s)
+    xm_ms[:, s] = np.mean(x_ms[:, s, :], axis=1)
+    for k in range(nens):
+      x_ms[:, s, k] = x_ms[:, s, k] - xm_ms[:, s]
+  for s in range(ns):
+    for j in range(nobs):
+      dist = np.abs(np.arange(nx) - ind[j])
+      dist = np.minimum(dist, nx - dist)
+      rho = GC_local_func(dist, ROI[s])
+      hxm = np.sum(xm_ms[ind[j], :])
+      hx = np.sum(x_ms[ind[j], :, :], axis=0)
+      varb = np.sum(hx * hx) / (nens - 1)
+      varo = obserr[s] ** 2
+      obs_prior = hx + hxm
+      obs = yo[ind[j]]
+      SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
+      cov = np.array(np.matrix(x_ms[:, s, :]) * np.matrix(hx).T) / (nens - 1)
+      K = cov[:, 0] / (varb + varo)
+      x_ms[:, s, :] = x_ms[:, s, :] - SRfac * np.array(np.matrix(rho * K).T * np.matrix(hx))
+      xm_ms[:, s] = xm_ms[:, s] + rho * K * (obs - hxm)
+  for k in range(nens):
+    xens1[:, k] = np.sum(x_ms[:, :, k] + xm_ms, axis=1)
   return xens1
 
 

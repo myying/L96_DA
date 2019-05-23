@@ -32,6 +32,21 @@ def spec_convolve(a, b):
   cf = np.convolve(af, bf, 'same')
   return np.conj(cf[nk+1:0:-1])
 
+def spec_bandpass(x, krange, s):
+  nx = x.size
+  ns = krange.size + 1
+  xh = grid2spec(x)
+  nk = xh.size
+  wn = np.arange(0, nk)
+  f = np.zeros(nk)
+  if s == 0:
+    f[np.where(wn<=krange[s])] = 1.0
+  if s == ns-1:
+    f[np.where(wn>krange[s-1])] = 1.0
+  if s > 0 and s < ns-1:
+    f[np.where(np.logical_and(wn>krange[s-1], wn<=krange[s]))] = 1.0
+  x_f = spec2grid(xh*f)
+  return x_f
 
 ###spatial operators
 def warp(A, di, dt):
@@ -41,6 +56,15 @@ def warp(A, di, dt):
     for t in range(nt):
       A1[i, t] = interp2d(A, (i+di[i, t], t+dt[i, t]))
   return A1
+
+def interp1d(A, loc):
+  nx = A.size
+  io = loc
+  io1 = int(np.floor(io))
+  io2 = io1+1
+  di = io - io1
+  Ao = (1-di)*A[io1] + di*A[io2]
+  return Ao
 
 def interp2d(A, loc):
   ni, nt = A.shape
