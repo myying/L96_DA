@@ -43,15 +43,22 @@ def EnKF_serial(xens, ind, yo, obserr, ROI, filter_kind):
     x[:, k] = x[:, k] - xm
   xb = x.copy()
   for j in np.arange(nobs):
-    dist = np.abs(np.arange(nx) - ind[j])
-    dist = np.minimum(dist, nx - dist)
-    rho = GC_local_func(dist, ROI)
     hxm = xm[ind[j]]
     hx = np.array(x[ind[j], :])
     varb = np.sum(hx * hx) / (nens - 1)
     varo = obserr ** 2
     obs_prior = hx + hxm
     obs = yo[ind[j]]
+    #localization
+    # dist = np.abs(np.arange(nx) - ind[j])
+    # dist = np.minimum(dist, nx - dist)
+    # rho = GC_local_func(dist, ROI) ##Gaspari-Cohn
+    cov = np.array(np.matrix(x) * np.matrix(hx).T) / (nens - 1)
+    varb1 = np.sum(x**2, axis=1) / (nens-1)
+    corr = cov[:, 0] / np.sqrt(varb * varb1)
+    rho = SEC_func(corr, varb, varb1, nens)  ##Sampling Error Correction (Anderson 2012)
+    # print(corr)
+    # print(rho)
     if filter_kind == 1:  #EAKF
       obs_inc = obs_inc_EAKF(obs_prior, varb, obs, varo)
       for i in np.arange(nx):
@@ -70,7 +77,7 @@ def EnKF_serial(xens, ind, yo, obserr, ROI, filter_kind):
       xm = xm + rho * K * (obs - hxm)
   for k in np.arange(nens):
     xens1[:, k] = x[:, k] + xm
-  return xens1
+  return xens1, rho
 
 def obs_inc_EAKF(prior, prior_var, obs, obs_var):
   prior_mean = np.mean(prior)
@@ -137,10 +144,12 @@ def EnSRF_specspec(xens, ind, yo, obserr, L, corr_kind):
     varb = np.sum(hx**2) / (nens - 1)
     varo = wo[j, j]
     SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
-    K = np.dot(x, hx) / (nens-1) / (varb + varo)
-    # rho = np.zeros(nx)
-    # rho[j] = 1.0
-    rho = np.ones(nx)
+    cov = np.dot(x, hx) / (nens-1)
+    varb1 = np.sum(x**2, axis=1) / (nens-1)
+    corr = cov / np.sqrt(varb*varb1)
+    K = cov / (varb + varo)
+    rho = SEC_func(corr, varb, varb1, nens)
+    # rho = np.ones(nx)
     for k in range(nens):
       x[:, k] = x[:, k] - SRfac * rho * K * hx[k]
     xm = xm + rho * K * (obs[j] - hxm)
@@ -198,6 +207,23 @@ def GC_local_func(dist, ROI):
       else:
         coef[i] = (((-0.25 * r + 0.5) * r + 0.625) * r -
                5.0 / 3.0) * (r ** 2) + 1.0
+  return coef
+
+def SEC_func(corr, varb, varb1, nens):
+  nx = corr.size
+  coef = np.zeros(nx)
+  r_data = np.load("sec_table.npy")
+  for i in range(nx):
+    s_ratio = np.sqrt(varb1[i] / varb)
+    r = np.floor(corr[i]*100)/100
+    k = int(100*(r+1))
+    r_mean = r_data[k, 0]
+    r_std = np.sqrt(r_data[k, 1])
+    b_mean = r_mean * s_ratio
+    b_std = r_std * s_ratio
+    Q = b_mean / b_std
+    coef[i] = Q**2 / (Q**2 + 1)
+    # coef[i] = coef[i] * r_mean / corr[i]
   return coef
 
 def local_matrix(nx, nt, ROI, ROIt):

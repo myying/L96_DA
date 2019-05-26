@@ -2,6 +2,7 @@
 *pdf
 *gif
 *pyc
+*npy
 __pycache__
 output
 trials
