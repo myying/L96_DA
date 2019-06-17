@@ -1,19 +1,22 @@
 import numpy as np
+import data_assimilation as DA
 nx = 40
 F = 8.0
 dt = 0.2
-nt = 2000
+nt = 200
 cycle_period = 1
-time_window = 2 ##smoother analysis window (+-cycles)
+time_window = 1 ##smoother analysis window (+-cycles)
 obs_err = 1
-L = 2  #spatial corr in R
+L = 5  #spatial corr in R
 Lt = 0 #temporal corr in R
 corr_kind = 1  #1:AR(1) 2:AR(2)
-obs_thin = 1
+obs_thin = 2
 obs_ind = np.arange(0, nx, obs_thin)
-# H = np.eye(nx)
-# R = np.eye(nx) * (obs_err ** 2)
+H = DA.H_matrix(nx, time_window, obs_ind)
+R = DA.R_matrix(nx, time_window, obs_ind, obs_err, L, Lt, corr_kind)
 nens = 20
-ROI = 5  #localization in space (grid points)
+ROI = 10  #localization in space (grid points)
 ROIt = 0  #localization in time (cycles)
-alpha = 0.1
+rho = DA.local_matrix(nx, time_window, ROI, ROIt)
+alpha = 0.0
+inflation = 1.0

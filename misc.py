@@ -150,9 +150,22 @@ def ens_pert(xens):
 def error_covariance(xens):
   nx, nens = xens.shape
   xp = ens_pert(xens)
-  #P = np.zeros((nx, nx))
-  #for i in range(nx):
-  #  for j in range(nx):
-  #    P[i, j] = np.sum(xp[i, :] * xp[j, :]) / (nens-1)
   P = np.dot(xp, xp.T) / (nens-1)
   return P
+
+
+###diagnostics
+def sprd(xens):
+  nx, nens, nt = xens.shape
+  P = np.zeros((nx, nx))
+  for t in range(nt):
+    P += error_covariance(xens[:, :, t])
+  P = P/nt
+  return np.sqrt(np.mean(np.diag(P)))
+
+def rmse(xens, xt):
+  nx, nens, nt = xens.shape
+  error = np.mean(xens, axis=1) - xt
+  Q = np.dot(error, error.T) / nt
+  return np.sqrt(np.mean(np.diag(Q)))
+

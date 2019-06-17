@@ -11,9 +11,10 @@ F = p.F
 dt = p.dt
 nt = p.nt
 nens = p.nens
+nobs = p.H.shape[0]
 
 xt = np.zeros((nx, nt+1))  # truth
-yo = np.zeros((nx, nt+1))  # observations
+yo = np.zeros((nobs, nt+1))  # observations
 
 # spin up to climatology
 xt[:, 0] = np.random.normal(loc=0.0, scale=0.1, size=nx)
@@ -27,9 +28,8 @@ for tt in np.arange(nt):
 
 ## generate observation
 ##true R matrix with correlation scale L and variance obs_err**2
-R = DA.R_matrix(nx, 1, p.obs_ind, p.obs_err, p.L, 0, p.corr_kind)
 for t in np.arange(nt):
-  yo[:, t] = xt[:, t] + np.random.multivariate_normal(np.zeros(nx), R)
+  yo[:, t] = np.dot(p.H, xt[:, t]) + np.random.multivariate_normal(np.zeros(nobs), p.R)
 # err = np.random.multivariate_normal(np.zeros(nx*nt), R)
 # for t in range(nt):
 #   yo[:, t] = xt[:, t] + err[t*nx:(t+1)*nx]
