@@ -9,30 +9,35 @@ np.random.seed(0)
 nx = p.nx
 F = p.F
 dt = p.dt
-nt = p.nt
 nens = p.nens
-nobs = p.H.shape[0]
+nobs, nt = p.obs_ind.shape
 
-xt = np.zeros((nx, nt+1))  # truth
-yo = np.zeros((nobs, nt+1))  # observations
+xt = np.zeros((nx, nt))  # truth
+yo = np.zeros((nobs, nt))  # observations
 
 # spin up to climatology
 xt[:, 0] = np.random.normal(loc=0.0, scale=0.1, size=nx)
 for tt in np.arange(1000):
-  xt[:, 0] = L96.forward(xt[:, 0], nx, F, dt)
+  xt[:, 0] = L96.M_nl(xt[:, 0], nx, F, dt)
 
 # nature run
-for tt in np.arange(nt):
+for tt in np.arange(nt-1):
   # run model
-  xt[:, tt+1] = L96.forward(xt[:, tt], nx, F, dt)
+  xt[:, tt+1] = L96.M_nl(xt[:, tt], nx, F, dt)
 
 ## generate observation
 ##true R matrix with correlation scale L and variance obs_err**2
-for t in np.arange(nt):
-  yo[:, t] = np.dot(p.H, xt[:, t]) + np.random.multivariate_normal(np.zeros(nobs), p.R)
-# err = np.random.multivariate_normal(np.zeros(nx*nt), R)
-# for t in range(nt):
-#   yo[:, t] = xt[:, t] + err[t*nx:(t+1)*nx]
+####time uncorrelated obs error
+for t in range(nt):
+  H = DA.H_matrix(p.nx, p.obs_ind, np.arange(t, t+1))
+  R = DA.R_matrix(p.nx, p.obs_ind, np.arange(t, t+1), p.obs_err, p.L, 0)
+  yo[:, t] = np.dot(H, xt[:, t]) + np.random.multivariate_normal(np.zeros(nobs), R)
+  # print(yo[:, t])
+####time correlated obs error
+# H = DA.H_matrix(p.nx, p.obs_ind, np.arange(nt))
+# R = DA.R_matrix(p.nx, p.obs_ind, np.arange(nt), p.obs_err, p.L, p.Lt)
+# yo_err = np.random.multivariate_normal(np.zeros(nobs*nt), R)
+# yo = np.reshape(np.dot(H, np.reshape(xt.T, xt.size)) + yo_err, (nobs, nt))
 
 # initial ensemble
 xmean = xt[:, 0] + np.random.normal(0.0, 1.0, size=nx)
@@ -40,7 +45,7 @@ xens = np.zeros((nx, nens))
 for i in np.arange(nens):
   xens[:, i] = xmean + np.random.normal(0.0, 1.0, size=[nx])
 # spin up the ensemble
-# xens = L96.forward(xens, p.nx, p.F, 0.5)
+# xens = L96.M_nl(xens, p.nx, p.F, 0.5)
 
 # output to data file
 np.save("output/truth", xt)

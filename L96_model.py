@@ -1,7 +1,7 @@
 import numpy as np
 
-
-def forward(x, nx, F, dt):
+##nonlinear forward model
+def M_nl(x, nx, F, dt):
   for n in range(int(dt/0.005)):
     x = x + dxdt_func(x, nx, F)*0.005
   return x
@@ -22,3 +22,12 @@ def dxdt_func(x, nx, F):
     dxdt[1, :]  = (x[2, :] - x[-1, :]) * x[0, :]  - x[1, :] + F
     dxdt[-1, :] = (x[0, :] - x[-3, :]) * x[-2, :] - x[-1, :]+ F
   return dxdt
+
+
+##tangent linear and adjoint models
+def M_tl():
+  return dx
+
+
+def M_ad():
+  return dx

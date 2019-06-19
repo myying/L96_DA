@@ -5,8 +5,11 @@ import config as p
 import data_assimilation as DA
 import misc
 
-param1 = np.array([1, 2, 5, 8, 10, 15, 20, 30, 50])
-param2 = np.array([1.0, 1.05, 1.1, 1.2, 1.5, 2.0])
+# param1 = np.array([2, 5, 8, 10, 15, 20, 30, 50])
+# param2 = np.array([1.0, 1.05, 1.1, 1.2, 1.5, 2.0])
+param1 = np.array([0, 0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0])
+param2 = np.arange(0.0, 1.0, 0.1)
+
 RMSEb = np.zeros((param1.size, param2.size))
 RMSEa = np.zeros((param1.size, param2.size))
 SPRDb = np.zeros((param1.size, param2.size))
@@ -23,8 +26,9 @@ for i in range(param1.size):
     xens1 = np.copy(xens)
     cp = p.cycle_period
 
-    print(param1[i], param2[j])
-    rho = DA.local_matrix(p.nx, p.time_window, param1[i], p.ROIt)
+    print(np.round((param1[i], param2[j]), 2))
+    R = DA.R_matrix(p.nx, p.time_window, p.obs_ind, p.obs_err, param1[i], p.Lt, p.corr_kind)
+    rho = DA.local_matrix(p.nx, p.time_window, p.ROI, p.ROIt)
     ###run trials
     for tt in np.arange(p.nt):
       # analysis step
@@ -32,12 +36,14 @@ for i in range(param1.size):
         xb = xens1[:, :, tt].copy()
         xa = DA.EnKF(xb, yo[:, tt], p.H, p.R, rho)
         ##inflation
+        xb_mean = np.mean(xb, axis=1)
         xa_mean = np.mean(xa, axis=1)
         for k in np.arange(p.nens):
-          xens1[:, k, tt] = param2[j]*(xa[:, k]-xa_mean) + xa_mean
+          xens1[:, k, tt] = (1-param2[j])*(xa[:, k]-xa_mean) + param2[j]*(xb[:, k]-xb_mean) + xa_mean
+          # xens1[:, k, tt] = param2[j]*(xa[:, k]-xa_mean) + xa_mean
       # forecast step
-      xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
-      xens[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
+      xens1[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
+      xens[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
 
     #diagnostics
     RMSEb[i, j] = misc.rmse(xens[:, :, ::cp], xt[:, ::cp])

@@ -36,8 +36,8 @@ for i in range(params.size):
       for k in np.arange(p.nens):
         xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
     # forecast step
-    xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
-    xens[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
+    xens1[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
+    xens[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
 
   #diagnostics
   RMSEb[i] = misc.rmse(xens[:, :, ::cp], xt[:, ::cp])

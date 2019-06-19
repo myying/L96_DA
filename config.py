@@ -19,8 +19,8 @@ obs_err = 1
 L = 0  #spatial corr in R
 Lt = 0 #temporal corr in R
 ##uniform network
-obs_thin = 0.2
-obs_ind = np.tile(np.arange(0, nx, obs_thin), (nt, 1)).T
+obs_thin = 1
+obs_ind = np.tile(np.arange(0, 20, obs_thin), (nt, 1)).T
 ##random network
 # nobs = 30
 # obs_ind = np.random.uniform(0, nx, size=(nobs, nt))

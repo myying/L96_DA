@@ -17,7 +17,7 @@ for i in range(num_sample):
   xb = xt.copy()
   xb[:, 0] = xt[:, 0] + np.random.normal(loc=0.0, scale=0.001, size=[nx])
   for n in range(nt-1):
-    xb[:, n+1] = L96.forward(xb[:, n], nx, p.F, p.dt)
+    xb[:, n+1] = L96.M_nl(xb[:, n], nx, p.F, p.dt)
   err[i, :, :] = xb - xt
 
 #rmse = np.sqrt(np.mean(np.mean(err**2, axis=1), axis=0))

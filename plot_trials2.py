@@ -8,8 +8,10 @@ plt.figure(figsize=(10, 3))
 # outdir = "/home/yingyue/Google_Drive/data_assimilation/observation_error/Ying_2019_obserr/output/N20_L2s1_L0_F7"
 outdir = "output"
 
-param1 = np.array([1, 2, 5, 8, 10, 15, 20, 30, 50])
-param2 = np.array([1.0, 1.05, 1.1, 1.2, 1.5, 2.0])
+# param1 = np.array([2, 5, 8, 10, 15, 20, 30, 50])
+param1 = np.array([0, 0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0])
+param2 = np.arange(0.0, 1.0, 0.1)
+# param2 = np.array([1.0, 1.05, 1.1, 1.2, 1.5, 2.0])
 
 RMSEa = np.load(outdir+"/RMSEa.npy")
 SPRDa = np.load(outdir+"/SPRDa.npy")

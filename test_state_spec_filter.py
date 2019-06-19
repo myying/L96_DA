@@ -42,8 +42,8 @@ for tt in np.arange(p.nt):
 
     # forecast
     for i in np.arange(p.nens):
-        xens1[:, i, tt+1] = L96.forward(xens1[:, i, tt], p.nx, p.F, p.dt)
-        xens[:, i, tt+1] = L96.forward(xens[:, i, tt], p.nx, p.F, p.dt)
+        xens1[:, i, tt+1] = L96.M_nl(xens1[:, i, tt], p.nx, p.F, p.dt)
+        xens[:, i, tt+1] = L96.M_nl(xens[:, i, tt], p.nx, p.F, p.dt)
 
 np.save("output/ensemble_prior", xens)
 # np.save("data_out_xhens", xhens)

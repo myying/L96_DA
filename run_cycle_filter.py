@@ -10,10 +10,41 @@ xt = np.load("output/truth.npy")
 yo = np.load("output/obs.npy")
 xens0 = np.load("output/initial_ensemble.npy")
 
-xens = np.zeros([p.nx, p.nens, p.nt+1])
+xens = np.zeros([p.nx, p.nens, p.nt])
 xens[:, :, 0] = xens0[:, 0:p.nens]
 xens1 = np.copy(xens)
 
+##### assimilation cycle
+for tt in range(p.nt-1):
+  # analysis step
+  if(np.mod(tt, p.cycle_period) == 0):
+    xb = xens1[:, :, tt].copy()
+
+    ######Define obs network
+    t_ind = np.arange(tt, tt+1)
+    H = DA.H_matrix(p.nx, p.obs_ind, t_ind)
+    # print(H)
+    R = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, p.L, 0)
+
+    #####adaptive prior inflation
+    # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
+
+    ######Filter kinds:
+    ###full matrix version EnKF
+    rho = DA.local_matrix(p.nx, t_ind, p.ROI, p.ROIt)
+    xa = DA.EnKF(xb, yo[:, tt], H, R, rho)
+
+    ###serial EnKF
+    # D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, p.time_space_ratio)
+    # print(D)
+    # xa = DA.EnKF_serial(xb, yo[:, tt], H, R, D, p.ROI)
+
+    ##transform to spectral
+    # U = misc.fourier_basis(p.nx)
+    # Uxb = np.dot(U, xb)
+    # Uxa = DA.EnKF_serial(Uxb, yo[:, tt], p.H, p.R, p.ROI)
+
+    ##multiscale filter
 # krange = np.arange(1, 10, 2)
 # ns = krange.size + 1
 # obs_err_ms = p.obs_err * np.ones(ns)
@@ -31,33 +62,19 @@ xens1 = np.copy(xens)
 #   if s > 0 and s < ns-1:
 #     mid = (krange[s-1] + krange[s])/2
 #   obs_err_ms[s] = misc.interp1d(wo, mid)
+    # for s in range(ks):
+    #   xa = DA.EnKF_serial(xb, p.obs_ind, yo[:, tt], obs_err_ms, ROI_ms, krange)
 
-# assimilation cycle
-for tt in np.arange(p.nt):
-  # analysis step
-  if(np.mod(tt, p.cycle_period) == 0):
-    xb = xens1[:, :, tt].copy()
-
-    ##adaptive prior inflation
-    # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
-
-    xa = DA.EnKF(xb, yo[:, tt], p.H, p.R, p.rho)
-    # xa = DA.EnKF_serial(xb, p.obs_ind, yo[:, tt], p.obs_err, p.ROI, filter_kind=2)
-    # xa = DA.EnSRF_spec(xb, p.obs_ind, yo[:, tt], p.obs_err, p.ROI)
-    # xa = DA.EnSRF_multiscale(xb, p.obs_ind, yo[:, tt], obs_err_ms, ROI_ms, krange)
-    # xa = DA.EnSRF_specspec(xb, p.obs_ind, yo[:, tt], p.obs_err, p.L, p.corr_kind)
-
-    ##inflation
+    #####posterior inflation
     xb_mean = np.mean(xb, axis=1)
     xa_mean = np.mean(xa, axis=1)
     for k in np.arange(p.nens):
-      xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
-      # xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
-    # xens1[:, :, tt] = xa
+      # xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
+      xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
 
   # forecast step
-  xens1[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
-  xens[:, :, tt+1] = L96.forward(xens1[:, :, tt], p.nx, p.F, p.dt)
+  xens1[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
+  xens[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
 
 np.save("output/ensemble_prior", xens)
 np.save("output/ensemble_post", xens1)
