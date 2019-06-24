@@ -3,17 +3,19 @@ import numpy as np
 import config as p
 import data_assimilation as DA
 import matplotlib.pyplot as plt
+import sys
 plt.switch_backend('Agg')
 
-xt = np.load("output/truth.npy")
-yo = np.load("output/obs.npy")
-xens = np.load("output/ensemble_prior.npy")
-xens1 = np.load("output/ensemble_post.npy")
+outdir = sys.argv[1]
+xt = np.load(outdir+"/truth.npy")
+yo = np.load(outdir+"/obs.npy")
+xens = np.load(outdir+"/ensemble_prior.npy")
+xens1 = np.load(outdir+"/ensemble_post.npy")
 
 nx, nens, nt = xens.shape
-tt = 90
+tt = nt-1
 ax = plt.subplot(211)
-ax.plot(xens1[:, 0:100, tt], 'c')
+ax.plot(xens1[:, :, tt], 'c')
 ax.plot(np.mean(xens1[:, :, tt], axis=1), 'b')
 if(np.mod(tt, p.cycle_period) == 0):
   ax.plot(p.obs_ind[:, tt], yo[:, tt], 'rx')
@@ -38,10 +40,10 @@ ax.plot(time[:tt*2], rmse_out[:tt*2], 'k', label='error')
 ax.plot(time[:tt*2], sprd_out[:tt*2], 'g', label='spread')
 ax.plot(np.arange(nt), p.obs_err*np.ones(nt), color='0.7')
 ax.set_xlabel('time')
-ax.set_xticks(np.arange(0, 220, 20))
-ax.set_xticklabels(np.round(np.arange(0, 220, 20)*0.02, 2))
-ax.set_xlim(0, 100)
-ax.set_ylim(0, 5)
+# ax.set_xticks(np.arange(0, 220, 20))
+# ax.set_xticklabels(np.round(np.arange(0, 220, 20)*0.02, 2))
+ax.set_xlim(0, nt)
+ax.set_ylim(0, 2)
 ax.legend(fontsize=12, loc=1)
 
 # xa = np.mean(xens, axis=1)
@@ -50,8 +52,8 @@ ax.legend(fontsize=12, loc=1)
 # ax = plt.subplot(122)
 # ax.contourf((xa-xt).T, np.arange(-10, 15, 1))
 
-# print(np.sqrt(np.mean(rmse[::p.cycle_period]**2)))
-# print(np.sqrt(np.mean(rmse1[::p.cycle_period]**2)))
+print(np.sqrt(np.mean(rmse[::p.cycle_period]**2)))
+print(np.sqrt(np.mean(rmse1[::p.cycle_period]**2)))
 # err_reduc = rmse1[::p.cycle_period]/rmse[::p.cycle_period]
 # print(np.mean(err_reduc[3:]))
 

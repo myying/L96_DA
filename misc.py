@@ -155,17 +155,31 @@ def error_covariance(xens):
 
 
 ###diagnostics
-def sprd(xens):
+def P_out(xens):
   nx, nens, nt = xens.shape
   P = np.zeros((nx, nx))
   for t in range(nt):
     P += error_covariance(xens[:, :, t])
   P = P/nt
+  return P
+
+def sprd(P):
   return np.sqrt(np.mean(np.diag(P)))
 
-def rmse(xens, xt):
+def Q_out(xens, xt):
   nx, nens, nt = xens.shape
   error = np.mean(xens, axis=1) - xt
   Q = np.dot(error, error.T) / nt
+  return Q
+
+def rmse(Q):
   return np.sqrt(np.mean(np.diag(Q)))
 
+def matrix_spec(P):
+  n, n = P.shape
+  U = fourier_basis(n)
+  W = np.dot(U.T, np.dot(P, U))
+  d = np.diag(W)
+  m = int(n/2)*2
+  d1 = np.sqrt( (d[0:m:2] + d[1:m:2])/2 )
+  return d1
