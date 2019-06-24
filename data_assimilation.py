@@ -2,7 +2,8 @@ import numpy as np
 import misc
 
 ##filters, full matrix version with perturbed obs
-def EnKF(prior, yo, H, R, rho):
+def EnKF(prior, yo, H, R, rho, seed):
+  np.random.seed(seed)
   post = prior.copy()
   nx, nens = prior.shape
   nobs = yo.size
@@ -80,16 +81,17 @@ def R_matrix(nx, obs_ind, t_ind, obs_err, L, Lt):
       if L <= 0:
         corr = np.eye(nobs)
       else:
-        corr = np.exp(-dist/L)
+        corr = np.exp(-1.0*dist/L)
       #time component
       tdist = np.abs(i - j)
       if Lt <= 0:
         if tdist > 0:
           corr = corr * 0.0
       else:
-        corr = corr * np.exp(-tdist/Lt)
+        corr = corr * np.exp(-1.0*tdist/Lt)
       #block of R:
       R[i*nobs:(i+1)*nobs, j*nobs:(j+1)*nobs] = obs_err**2 * corr
+      R = R + np.eye(n) * 1e-8  ##avoid singularity
   return R
 
 def GC_func(dist, ROI):
