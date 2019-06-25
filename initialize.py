@@ -40,10 +40,12 @@ for t in range(nt):
 # yo = np.reshape(np.dot(H, np.reshape(xt.T, xt.size)) + yo_err, (nobs, nt))
 
 # initial ensemble
-xmean = xt[:, 0] + np.random.normal(0.0, 1.0, size=nx)
+error_mean = 0.0
+error_magnitude = 0.01  ##set to 1.0, matches obs error
+xmean = xt[:, 0] + np.random.normal(error_mean, error_magnitude, size=nx)
 xens = np.zeros((nx, nens))
 for i in np.arange(nens):
-  xens[:, i] = xmean + np.random.normal(0.0, 1.0, size=[nx])
+  xens[:, i] = xmean + np.random.normal(error_mean, error_magnitude, size=[nx])
 # spin up the ensemble
 # xens = L96.M_nl(xens, p.nx, p.F, 0.5)
 
