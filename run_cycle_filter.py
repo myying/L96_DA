@@ -17,34 +17,39 @@ xens1 = np.copy(xens)
 ##### assimilation cycle
 for tt in range(p.nt-1):
   # analysis step
-  if(np.mod(tt, p.cycle_period) == 0):
+  if(np.mod(tt, p.cycle_period) == 0) and tt>0:
     xb = xens1[:, :, tt].copy()
 
-    ######Define obs network
-    t_ind = np.arange(tt, tt+1)
-    H = DA.H_matrix(p.nx, p.obs_ind, t_ind)
-    # print(H)
-    R = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, p.L, 0)
+    ######Define obs nep.time_windowork
+    t1 = max(0, tt-p.time_window)
+    t2 = min(p.nt, tt+p.time_window)
+    t_ind = np.arange(t1, t2+1)
+    # print(t_ind)
 
     #####adaptive prior inflation
     # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
 
-    ######Filter kinds:
-    ###full matrix version EnKF
-    rho = DA.local_matrix(p.nx, t_ind, p.ROI, p.ROIt)
-    xa = DA.EnKF(xb, yo[:, tt], H, R, rho)
+    x = xb
+    ##assimilate obs from within window
+    for t in t_ind:
+      H = DA.H_matrix(p.nx, p.obs_ind, np.array([t]), 0)
+      R = DA.R_matrix(p.nx, p.obs_ind, np.array([t]), p.obs_err, p.L, 0)
 
-    ###serial EnKF
-    # D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, p.time_space_ratio)
-    # print(D)
-    # xa = DA.EnKF_serial(xb, yo[:, tt], H, R, D, p.ROI)
+      ######Ensemble Filters:
+      ##1. full matrix version EnKF
+      rho = DA.local_matrix(p.nx, np.array([tt]), p.ROI, 0)
+      x = DA.EnKF(x, yo[:, t], H, R, rho, tt)
 
-    ##transform to spectral
-    # U = misc.fourier_basis(p.nx)
-    # Uxb = np.dot(U, xb)
-    # Uxa = DA.EnKF_serial(Uxb, yo[:, tt], p.H, p.R, p.ROI)
+      ##2. serial EnKF
+      # D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, 1)
+      # x = DA.EnKF_serial(x, yo[:, tt], H, R, D, p.ROI)
 
-    ##multiscale filter
+      ##3. transform to spectral
+      # U = misc.fourier_basis(p.nx)
+      # Uxb = np.dot(U, xb)
+      # Uxa = DA.EnKF_serial(Uxb, yo[:, tt], p.H, p.R, p.ROI)
+
+      ##4. multiscale filter
 # krange = np.arange(1, 10, 2)
 # ns = krange.size + 1
 # obs_err_ms = p.obs_err * np.ones(ns)
@@ -62,8 +67,10 @@ for tt in range(p.nt-1):
 #   if s > 0 and s < ns-1:
 #     mid = (krange[s-1] + krange[s])/2
 #   obs_err_ms[s] = misc.interp1d(wo, mid)
-    # for s in range(ks):
-    #   xa = DA.EnKF_serial(xb, p.obs_ind, yo[:, tt], obs_err_ms, ROI_ms, krange)
+      # for s in range(ks):
+      #   xa = DA.EnKF_serial(xb, p.obs_ind, yo[:, tt], obs_err_ms, ROI_ms, krange)
+
+    xa = x
 
     #####posterior inflation
     xb_mean = np.mean(xb, axis=1)

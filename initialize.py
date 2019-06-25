@@ -29,12 +29,12 @@ for tt in np.arange(nt-1):
 ##true R matrix with correlation scale L and variance obs_err**2
 ####time uncorrelated obs error
 for t in range(nt):
-  H = DA.H_matrix(p.nx, p.obs_ind, np.arange(t, t+1))
+  H = DA.H_matrix(p.nx, p.obs_ind, np.arange(t, t+1), 0)
   R = DA.R_matrix(p.nx, p.obs_ind, np.arange(t, t+1), p.obs_err, p.L, 0)
   yo[:, t] = np.dot(H, xt[:, t]) + np.random.multivariate_normal(np.zeros(nobs), R)
   # print(yo[:, t])
 ####time correlated obs error
-# H = DA.H_matrix(p.nx, p.obs_ind, np.arange(nt))
+# H = DA.H_matrix(p.nx, p.obs_ind, np.arange(nt), 0)
 # R = DA.R_matrix(p.nx, p.obs_ind, np.arange(nt), p.obs_err, p.L, p.Lt)
 # yo_err = np.random.multivariate_normal(np.zeros(nobs*nt), R)
 # yo = np.reshape(np.dot(H, np.reshape(xt.T, xt.size)) + yo_err, (nobs, nt))

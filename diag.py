@@ -7,13 +7,9 @@ import matplotlib.pyplot as plt
 import sys
 from scipy.fftpack import fft
 plt.switch_backend('Agg')
-plt.figure(figsize=(3, 3))
+plt.figure(figsize=(8, 6))
 
 outdir = sys.argv[1]
-Lt = int(sys.argv[2])
-L = int(sys.argv[3])
-outdir = outdir + "/L{}_L{}".format(Lt, L)
-# read in obs and prior ensemble
 truth = np.load(outdir+"/truth.npy")
 prior = np.load(outdir+"/ensemble_prior.npy")
 post = np.load(outdir+"/ensemble_post.npy")
@@ -34,9 +30,9 @@ cp = p.cycle_period
 
 ###covariance matrices
 t_ind = np.array([0])
-R = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, L, 0)
-Rt = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, Lt, 0)
-H = DA.H_matrix(p.nx, p.obs_ind, t_ind)
+R = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, p.L, 0)
+Rt = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, 2, 0)
+H = DA.H_matrix(p.nx, p.obs_ind, t_ind, 0)
 HTRinvH = np.dot(H.T, np.dot(np.linalg.inv(R), H))
 HTRtinvH = np.dot(H.T, np.dot(np.linalg.inv(Rt), H))
 rho = DA.local_matrix(p.nx, t_ind, p.ROI, p.ROIt)  ##loalization
@@ -65,8 +61,8 @@ Lb = misc.matrix_spec(Pb)
 Lbt = misc.matrix_spec(Qb)
 La = misc.matrix_spec(Pa)
 Lat = misc.matrix_spec(Qa)
-Lo = misc.matrix_spec(R)
-Lot = misc.matrix_spec(Rt)
+Lo = misc.matrix_spec(HTRinvH) ** -1
+Lot = misc.matrix_spec(HTRtinvH) ** -1
 
 ###compare P from different estimates
 # clevel = np.arange(-3, 3.1, 0.1)
@@ -87,7 +83,8 @@ Lot = misc.matrix_spec(Rt)
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
 ###plot eigenvalue spectrum
-ax = plt.subplot(111)
+ax = plt.subplot(221)
+print(Lo)
 ax.plot(Lot, 'k', label=r'$\Lambda^{o*}$')
 ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$')
 ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$')
@@ -97,6 +94,7 @@ ax.plot(La, 'y', label=r'$\Lambda^a$')
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
 ax.legend(fontsize=13, ncol=2)
 ax.set_ylim(0, 2)
+ax.set_xlim(-1, p.nx/2)
 # ax.set_xlabel('wavenumber')
 
 ###plot eigenvectors

@@ -41,7 +41,7 @@ def EnKF_serial(prior, yo, H, R, D, ROI):
     post[:, k] = ens_pert[:, k] + ens_mean
   return post
 
-def H_matrix(nx, obs_ind, t_ind):
+def H_matrix(nx, obs_ind, t_ind, smooth):
   nobs, nt = obs_ind.shape
   H = np.zeros((nobs * t_ind.size, nx * t_ind.size))
   for i in range(t_ind.size):
@@ -53,6 +53,15 @@ def H_matrix(nx, obs_ind, t_ind):
       shift = ind - int(ind)
       H[i*nobs+j, i*nx+ind_left] = 1 - shift
       H[i*nobs+j, i*nx+ind_right] = shift
+      ##smoothing
+      if smooth > 0:
+        dist = np.abs(np.arange(nx) - ind)
+        dist = np.minimum(dist, nx-dist)
+        weight = np.zeros(nx)
+        weight = np.exp(-(dist/smooth)**2)
+        # weight[np.where(dist < smooth)] = 1.0
+        weight = weight / np.sum(weight)
+        H[i*nobs+j, i*nx:(i+1)*nx] = weight
   return H
 
 def D_matrix(nx, obs_ind, t_ind, t_ana, time_space_ratio):
