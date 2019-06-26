@@ -7,7 +7,7 @@ import misc
 
 # read in initial data
 xt = np.load("output/truth.npy")
-yo = np.load("output/obs.npy")
+obs = np.load("output/obs.npy")
 xens0 = np.load("output/initial_ensemble.npy")
 
 xens = np.zeros([p.nx, p.nens, p.nt])
@@ -19,6 +19,7 @@ for tt in range(p.nt-1):
   # analysis step
   if(np.mod(tt, p.cycle_period) == 0) and tt>0:
     xb = xens1[:, :, tt].copy()
+    xa = xb
 
     ######Define obs nep.time_windowork
     t1 = max(0, tt-p.time_window)
@@ -26,51 +27,31 @@ for tt in range(p.nt-1):
     t_ind = np.arange(t1, t2+1)
     # print(t_ind)
 
-    #####adaptive prior inflation
-    # xens1[:, :, tt] = DA.adaptive_inflation(xens1[:, :, tt], p.obs_ind, yo[:, tt], p.obs_err)
-
-    x = xb
+    x = xb.copy()
+    dx = np.zeros(x.shape)
     ##assimilate obs from within window
     for t in t_ind:
+      # print(t)
+      yo = obs[:, t]
       H = DA.H_matrix(p.nx, p.obs_ind, np.array([t]), 0)
       R = DA.R_matrix(p.nx, p.obs_ind, np.array([t]), p.obs_err, p.L, 0)
-
-      ######Ensemble Filters:
-      ##1. full matrix version EnKF
       rho = DA.local_matrix(p.nx, np.array([tt]), p.ROI, 0)
-      x = DA.EnKF(x, yo[:, t], H, R, rho, tt)
-
-      ##2. serial EnKF
-      # D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, 1)
-      # x = DA.EnKF_serial(x, yo[:, tt], H, R, D, p.ROI)
-
-      ##3. transform to spectral
-      # U = misc.fourier_basis(p.nx)
-      # Uxb = np.dot(U, xb)
-      # Uxa = DA.EnKF_serial(Uxb, yo[:, tt], p.H, p.R, p.ROI)
-
-      ##4. multiscale filter
-# krange = np.arange(1, 10, 2)
-# ns = krange.size + 1
-# obs_err_ms = p.obs_err * np.ones(ns)
-# ROI_ms = np.array([15, 12, 10, 8, 5, 3])
-# ROI_ms = 15 * np.ones(ns)
-# obs_err_ms = np.zeros(ns)
-# R = DA.R_matrix(p.nx, 1, p.obs_ind, p.obs_err, 2, 0, 1)
-# v = misc.fourier_basis(p.nx)
-# wo = np.sqrt(np.diag(np.dot(v.T, np.dot(R, v)))[::2])
-# for s in range(ns):
-#   if s == 0:
-#     mid = krange[s]/2
-#   if s == ns-1:
-#     mid = (krange[s-1] + wo.size)/2
-#   if s > 0 and s < ns-1:
-#     mid = (krange[s-1] + krange[s])/2
-#   obs_err_ms[s] = misc.interp1d(wo, mid)
-      # for s in range(ks):
-      #   xa = DA.EnKF_serial(xb, p.obs_ind, yo[:, tt], obs_err_ms, ROI_ms, krange)
-
-    xa = x
+      ###single scale EnKF
+      if p.filter_kind == 1:
+        if p.multiscale:
+          for s in range(p.krange.size+1):
+            x1 = DA.EnKF(x, yo, H, R*p.obs_err_inf[s], rho, tt)
+            for k in range(p.nens):
+              dx[:, k] += misc.spec_bandpass(x1[:, k]-x[:, k], p.krange, s)
+        else:
+          x1 = DA.EnKF(x, yo, H, R, rho, tt)
+          dx = x1 - x
+      #####serial EnKF
+      if p.filter_kind == 2:
+        D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, 1)
+        x1 = DA.EnKF_serial(x, yo, H, R, D, p.ROI)
+        dx = x1 - x
+    xa = xb + dx
 
     #####posterior inflation
     xb_mean = np.mean(xb, axis=1)
