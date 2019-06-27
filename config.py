@@ -9,35 +9,25 @@ F = 8.0
 dt = 0.2
 
 ### Cycling experiment setup
-nt = 1000
+nt = 100
 cycle_period = 1
-time_window = 0 ##smoother analysis window (+-cycles)
+time_window = 1 ##smoother analysis window (+-cycles)
 time_space_ratio = 1.0 ##ratio of dt/dx
 
 ### Observation network setup
-obs_err = 1.0
-L = 5  #spatial corr in R
+obs_err = 1
+L = 0  #spatial corr in R
 Lt = 0 #temporal corr in R
-##type of network:
-##1. uniform
+##uniform network
 obs_thin = 1
-obs_ind = np.tile(np.arange(0, nx, obs_thin), (nt, 1)).T
-##2. random
-# nobs = 40
+obs_ind = np.tile(np.arange(0, 20, obs_thin), (nt, 1)).T
+##random network
+# nobs = 30
 # obs_ind = np.random.uniform(0, nx, size=(nobs, nt))
 
 ### Ensemble filter tuning parameters
 nens = 20
 ROI = 10  #localization in space (grid points)
-ROIt = 0  #localization in time (cycles)
+ROIt = 2  #localization in time (cycles)
 alpha = 0.0  ##relaxation coef
-inflation = 1.1  ##multiplicative inflation
-
-
-### filter kind 1=EnKF w/ perturbed obs, 2=serial EnKF
-filter_kind = 1
-##multiscale
-multiscale = False
-krange = np.array([3, 7, 10, 15])
-# obs_err_inf = np.array([1.6, 0.8, 0.6, 0.55, 0.5])
-obs_err_inf = np.array([1.7, 0.6, 0.4, 0.35, 0.3])
+inflation = 1.0  ##multiplicative inflation

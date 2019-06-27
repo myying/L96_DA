@@ -41,7 +41,7 @@ for t in range(nt):
 
 # initial ensemble
 error_mean = 0.0
-error_magnitude = 1.0  ##set to 1.0, matches obs error
+error_magnitude = 0.01  ##set to 1.0, matches obs error
 xmean = xt[:, 0] + np.random.normal(error_mean, error_magnitude, size=nx)
 xens = np.zeros((nx, nens))
 for i in np.arange(nens):
