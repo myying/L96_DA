@@ -16,15 +16,15 @@ prior = np.load(outdir+"/ensemble_forecast.npy")
 nx, nens, nt = prior.shape
 
 ###covariance matrices
-Pb = np.zeros((nx, nx))
-for t in range(nt):
-  Pb += misc.error_covariance(prior[:, :, t]) 
-Pb = Pb/nt
-# Pb = misc.error_covariance(prior[:, :, tt])
+# Pb = np.zeros((nx, nx))
+# for t in range(nt):
+#   Pb += misc.error_covariance(prior[:, :, t])
+# Pb = Pb/nt
+Pb = misc.error_covariance(prior[:, :, tt])
 
 ##actual error matrices
-Qb = misc.Q_out(prior, truth)
-# Qb = misc.Q_out(prior[:, :, tt:tt+1], truth[:, tt:tt+1])
+# Qb = misc.Q_out(prior, truth)
+Qb = misc.Q_out(prior[:, :, tt:tt+1], truth[:, tt:tt+1])
 print('prior rmse = {}, sprd = {}'.format(misc.rmse(Qb), misc.sprd(Pb)))
 
 ##spectrum
@@ -36,7 +36,8 @@ ax = plt.subplot(221)
 ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$')
 ax.plot(Lb, 'c', label=r'$\Lambda^b$')
 # ax.legend(fontsize=13, ncol=2)
-ax.set_ylim(0, 5)
+ax.set_ylim(0, 1)
 ax.set_xlim(-1, p.nx/2)
 
+# plt.savefig('{:04d}.png'.format(tt), dpi=200)
 plt.savefig('1.pdf')
