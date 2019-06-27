@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import sys
 from scipy.fftpack import fft
 plt.switch_backend('Agg')
-plt.figure(figsize=(8, 6))
+plt.figure(figsize=(4, 3))
 
-outdir = sys.argv[1]
+outdir = "output" #sys.argv[1]
 truth = np.load(outdir+"/truth.npy")
 prior = np.load(outdir+"/ensemble_prior.npy")
 post = np.load(outdir+"/ensemble_post.npy")
@@ -31,7 +31,7 @@ cp = p.cycle_period
 ###covariance matrices
 t_ind = np.array([0])
 R = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, p.L, 0)
-Rt = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, 2, 0)
+Rt = DA.R_matrix(p.nx, p.obs_ind, t_ind, 1, 5, 0)
 H = DA.H_matrix(p.nx, p.obs_ind, t_ind, 0)
 HTRinvH = np.dot(H.T, np.dot(np.linalg.inv(R), H))
 HTRtinvH = np.dot(H.T, np.dot(np.linalg.inv(Rt), H))
@@ -83,18 +83,29 @@ Lot = misc.matrix_spec(HTRtinvH) ** -1
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
 ###plot eigenvalue spectrum
-ax = plt.subplot(221)
-print(Lo)
-ax.plot(Lot, 'k', label=r'$\Lambda^{o*}$')
-ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$')
-ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$')
-ax.plot(Lo, 'k:', label=r'$\Lambda^o$')
-ax.plot(Lb, 'c', label=r'$\Lambda^b$')
-ax.plot(La, 'y', label=r'$\Lambda^a$')
+ax = plt.subplot(111)
+ax.plot(Lot, 'k', label=r'$\Lambda^{o*}$', linewidth=2)
+if p.multiscale:
+  wn = np.arange(0, Lo.size)
+  ns = p.krange.size+1
+  for s in range(ns):
+    if s == 0:
+      ax.plot([0, p.krange[s]], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
+    if s == ns-1:
+      ax.plot([p.krange[s-1], p.nx/2-1], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
+    if s > 0 and s < ns-1:
+      ax.plot([p.krange[s-1], p.krange[s]], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
+else:
+  ax.plot(Lo, 'k:', label=r'$\Lambda^o$', linewidth=2)
+ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$', linewidth=2)
+ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$', linewidth=2)
+ax.plot(Lb, 'c', label=r'$\Lambda^b$', linewidth=2)
+ax.plot(La, 'y', label=r'$\Lambda^a$', linewidth=2)
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
-ax.legend(fontsize=13, ncol=2)
+# ax.legend(fontsize=13, ncol=2)
 ax.set_ylim(0, 2)
 ax.set_xlim(-1, p.nx/2)
+ax.tick_params(labelsize=12)
 # ax.set_xlabel('wavenumber')
 
 ###plot eigenvectors
