@@ -49,8 +49,14 @@ for tt in range(p.nt-1):
       #####serial EnKF
       if p.filter_kind == 2:
         D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, 1)
-        x1 = DA.EnKF_serial(x, yo, H, R, D, p.ROI)
-        dx = x1 - x
+        if p.multiscale:
+          for s in range(p.krange.size+1):
+            x1 = DA.EnKF_serial(x, yo, H, R*p.obs_err_inf[s], D, p.ROI)
+            for k in range(p.nens):
+              dx[:, k] += misc.spec_bandpass(x1[:, k]-x[:, k], p.krange, s)
+        else:
+          x1 = DA.EnKF_serial(x, yo, H, R, D, p.ROI)
+          dx = x1 - x
     xa = xb + dx
 
     #####posterior inflation
