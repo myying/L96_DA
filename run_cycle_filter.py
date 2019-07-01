@@ -36,7 +36,8 @@ for tt in range(p.nt-1):
       H = DA.H_matrix(p.nx, p.obs_ind, np.array([t]), 0)
       R = DA.R_matrix(p.nx, p.obs_ind, np.array([t]), p.obs_err, p.L, 0)
       rho = DA.local_matrix(p.nx, np.array([tt]), p.ROI, 0)
-      ###single scale EnKF
+      ###perturbed obs EnKF
+      ######deterministic EnKF??
       if p.filter_kind == 1:
         if p.multiscale:
           for s in range(p.krange.size+1):
@@ -48,15 +49,22 @@ for tt in range(p.nt-1):
           dx = x1 - x
       #####serial EnKF
       if p.filter_kind == 2:
-        D = DA.D_matrix(p.nx, p.obs_ind, t_ind, tt, 1)
         if p.multiscale:
+          x1 = x.copy()
+          x_s = np.zeros((p.nx, p.nens))
           for s in range(p.krange.size+1):
-            x1 = DA.EnKF_serial(x, yo, H, R*p.obs_err_inf[s], D, p.ROI)
             for k in range(p.nens):
-              dx[:, k] += misc.spec_bandpass(x1[:, k]-x[:, k], p.krange, s)
+              x_s[:, k] = misc.spec_bandpass(x1[:, k], p.krange, s)
+            yo_s = misc.spec_bandpass(yo, p.krange, s)
+            obs_err = p.obs_err * p.obs_err_inf[s]
+            ###opt 1: decompose state
+            # x1_s = DA.EnKF_serial(x_s, x1, yo, obs_err, p.obs_ind[:, t], p.ROI)
+            # x1 += x1_s - x_s
+            ###opt 2: decompose obs
+            x1 = DA.EnKF_serial(x1, x_s, yo_s, obs_err, p.obs_ind[:, t], p.ROI)
         else:
-          x1 = DA.EnKF_serial(x, yo, H, R, D, p.ROI)
-          dx = x1 - x
+          x1 = DA.EnKF_serial(x, x, yo, p.obs_err, p.obs_ind[:, t], p.ROI)
+        dx = x1 - x
     xa = xb + dx
 
     #####posterior inflation
