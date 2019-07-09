@@ -2,7 +2,7 @@ import numpy as np
 import misc
 
 ##filters, full matrix version with perturbed obs
-def EnKF(prior, yo, H, R, rho, seed):
+def EnKF_perturbed_obs(prior, yo, H, R, rho, seed):
   np.random.seed(seed)
   post = prior.copy()
   nx, nens = prior.shape
@@ -17,28 +17,58 @@ def EnKF(prior, yo, H, R, rho, seed):
     post[:, k] = prior[:, k] + np.dot(K, (obs[:, k] - np.dot(H, prior[:, k])))
   return post
 
-##serial EnKF, assimilates obs one at a time
-def EnKF_serial(prior, yo, H, R, D, ROI):
-  post = prior.copy()
+##full matrix EnKF, deterministic version (square root filter)
+def EnKF(prior, yo, H, R, rho):
   nx, nens = prior.shape
   nobs = yo.size
-  ens_mean = np.mean(post, axis=1)
-  ens_pert = misc.ens_pert(post)
-  for j in range(nobs):
-    hxm = np.dot(H[j, :], ens_mean)
-    hx = np.dot(H[j, :], ens_pert)
-    varb = np.sum(hx * hx) / (nens - 1)
-    varo = R[j, j]
-    obs = yo[j]
-    rho = GC_func(D[j, :], ROI) ##Gaspari-Cohn
-    SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
-    cov = np.dot(ens_pert, hx) / (nens - 1)
-    K = cov / (varb + varo)
-    ens_mean = ens_mean + rho * K * (obs - hxm)
-    for k in range(nens):
-      ens_pert[:, k] = ens_pert[:, k] - SRfac * rho * K * hx[k]
+  prior_pert = prior.copy()
+  prior_mean = np.mean(prior, axis=1)
   for k in range(nens):
-    post[:, k] = ens_pert[:, k] + ens_mean
+    prior_pert[:, k] = prior[:, k] - prior_mean
+  post = prior.copy()
+  Pb = misc.error_covariance(prior)
+  A = np.dot(np.dot(H, Pb*rho), H.T) + R
+  u, s, vh = np.linalg.svd(A)
+  Ainv = np.dot(u, np.dot(np.diag(s**-1), vh))
+  Asqrt = np.dot(u, np.dot(np.diag(s**0.5), vh))
+  Asqrtinv = np.dot(u, np.dot(np.diag(s**-0.5), vh))
+  u, s, vh = np.linalg.svd(R)
+  Rsqrt = np.dot(u, np.dot(np.diag(s**0.5), vh))
+  ARinv = np.linalg.inv(Asqrt + Rsqrt)
+  cov = np.dot(Pb*rho, H.T)
+  innov = yo - np.dot(H, prior_mean)
+  post_mean = prior_mean + np.dot(np.dot(cov, Ainv), innov)
+  for k in range(nens):
+    post[:, k] = post_mean + prior_pert[:, k] - np.dot(np.dot(cov, np.dot(Asqrtinv.T, ARinv)), np.dot(H, prior_pert[:, k]))
+  return post
+
+##serial EnKF (square root filter), assimilates obs one at a time
+def EnKF_serial(prior, obs_prior, obs, obs_err, obs_ind, ROI):
+  post = prior.copy()
+  obs_post = obs_prior.copy()
+  nx, nens = prior.shape
+  nobs = obs.size
+  mean = np.mean(post, axis=1)
+  pert = misc.ens_pert(post)
+  obs_mean = np.mean(obs_post, axis=1)
+  obs_pert = misc.ens_pert(obs_post)
+  for j in range(nobs):
+    varb = np.sum(obs_pert[j, :] * obs_pert[j, :]) / (nens - 1)
+    varo = obs_err ** 2
+    SRfac = 1.0 / (1.0 + np.sqrt(varo / (varb + varo)))
+    #update state
+    rho = local_func(nx, np.arange(nx), obs_ind[j], ROI) #localization
+    K_gain = np.dot(pert, obs_pert[j, :]) / (nens - 1) / (varb + varo)
+    mean = mean + rho * K_gain * (obs[j] - obs_mean[j])
+    for k in range(nens):
+      pert[:, k] = pert[:, k] - SRfac * rho * K_gain * obs_pert[j, k]
+    #update obs_state
+    K_gain = np.dot(obs_pert, obs_pert[j, :]) / (nens - 1) / (varb + varo)
+    obs_mean = obs_mean + rho * K_gain * (obs[j] - obs_mean[j])
+    for k in range(nens):
+      obs_pert[:, k] = obs_pert[:, k] - SRfac * rho * K_gain * obs_pert[j, k]
+  for k in range(nens):
+    post[:, k] = pert[:, k] + mean
   return post
 
 def H_matrix(nx, obs_ind, t_ind, smooth):
@@ -117,6 +147,13 @@ def GC_func(dist, ROI):
         coef[i] = ((((r / 12.0 - 0.5) * r + 0.625) * r + 5.0 / 3.0) * r - 5.0) * r + 4.0 - 2.0 / (3.0 * r)
       else:
         coef[i] = (((-0.25 * r + 0.5) * r + 0.625) * r - 5.0 / 3.0) * (r ** 2) + 1.0
+  return coef
+
+def local_func(nx, ind, obs_ind, ROI):
+  coef = np.zeros(ind.shape)
+  dist = np.abs(ind - obs_ind)
+  dist = np.minimum(dist, nx - dist)
+  coef = GC_func(dist, ROI)
   return coef
 
 def local_matrix(nx, t_ind, ROI, ROIt):

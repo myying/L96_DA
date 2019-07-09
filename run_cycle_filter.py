@@ -21,7 +21,7 @@ for tt in range(p.nt-1):
     xb = xens1[:, :, tt].copy()
     xa = xb
 
-    ######Define obs nep.time_windowork
+    ######Define obs network
     t1 = max(0, tt-p.time_window)
     t2 = min(p.nt, tt+p.time_window)
     t_ind = np.arange(t1, t2+1)
@@ -36,16 +36,16 @@ for tt in range(p.nt-1):
       H = DA.H_matrix(p.nx, p.obs_ind, np.array([t]), 0)
       R = DA.R_matrix(p.nx, p.obs_ind, np.array([t]), p.obs_err, p.L, 0)
       rho = DA.local_matrix(p.nx, np.array([tt]), p.ROI, 0)
-      ###perturbed obs EnKF
-      ######deterministic EnKF??
+      #####EnKF
       if p.filter_kind == 1:
         if p.multiscale:
           for s in range(p.krange.size+1):
-            x1 = DA.EnKF(x, yo, H, R*p.obs_err_inf[s], rho, tt)
+            x1 = DA.EnKF(x, yo, H, R*p.obs_err_inf[s], rho)
             for k in range(p.nens):
               dx[:, k] += misc.spec_bandpass(x1[:, k]-x[:, k], p.krange, s)
         else:
-          x1 = DA.EnKF(x, yo, H, R, rho, tt)
+          x1 = DA.EnKF(x, yo, H, R, rho)
+          # x1 = DA.EnKF_perturbed_obs(x, yo, H, R, rho, tt)
           dx = x1 - x
       #####serial EnKF
       if p.filter_kind == 2:

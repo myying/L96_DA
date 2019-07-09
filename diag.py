@@ -10,10 +10,11 @@ plt.switch_backend('Agg')
 plt.figure(figsize=(4, 3))
 
 outdir = "output" #sys.argv[1]
-truth = np.load(outdir+"/truth.npy")
-prior = np.load(outdir+"/ensemble_prior.npy")
-post = np.load(outdir+"/ensemble_post.npy")
-obs = np.load(outdir+"/obs.npy")
+t1 = 500
+truth = np.load(outdir+"/truth.npy")[:, t1:]
+prior = np.load(outdir+"/ensemble_prior.npy")[:, :, t1:]
+post = np.load(outdir+"/ensemble_post.npy")[:, :, t1:]
+obs = np.load(outdir+"/obs.npy")[:, t1:]
 nx, nens, nt1 = prior.shape
 tt = 1
 nt = 1
@@ -84,8 +85,14 @@ Lot = misc.matrix_spec(HTRtinvH) ** -1
 
 ###plot eigenvalue spectrum
 ax = plt.subplot(111)
+ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$', linewidth=2)
+ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$', linewidth=2)
+ax.plot(Lb, 'c', label=r'$\Lambda^b$', linewidth=2)
+ax.plot(La, 'y', label=r'$\Lambda^a$', linewidth=2)
 ax.plot(Lot, 'k', label=r'$\Lambda^{o*}$', linewidth=2)
 if p.multiscale:
+  print(p.krange)
+  print(p.obs_err_inf)
   wn = np.arange(0, Lo.size)
   ns = p.krange.size+1
   for s in range(ns):
@@ -97,10 +104,6 @@ if p.multiscale:
       ax.plot([p.krange[s-1], p.krange[s]], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
 else:
   ax.plot(Lo, 'k:', label=r'$\Lambda^o$', linewidth=2)
-ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$', linewidth=2)
-ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$', linewidth=2)
-ax.plot(Lb, 'c', label=r'$\Lambda^b$', linewidth=2)
-ax.plot(La, 'y', label=r'$\Lambda^a$', linewidth=2)
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
 # ax.legend(fontsize=13, ncol=2)
 ax.set_ylim(0, 2)
