@@ -9,16 +9,18 @@ from scipy.fftpack import fft
 plt.switch_backend('Agg')
 plt.figure(figsize=(4, 3))
 
-outdir = "output" #sys.argv[1]
+outdir = sys.argv[1]
 t1 = 500
-truth = np.load(outdir+"/truth.npy")[:, t1:]
+truth = np.load("output/truth.npy")[:, t1:]
 prior = np.load(outdir+"/ensemble_prior.npy")[:, :, t1:]
 post = np.load(outdir+"/ensemble_post.npy")[:, :, t1:]
-obs = np.load(outdir+"/obs.npy")[:, t1:]
+obs = np.load("output/obs.npy")[:, t1:]
 nx, nens, nt1 = prior.shape
 tt = 1
 nt = 1
 cp = p.cycle_period
+L = float(sys.argv[2])
+obs_err = float(sys.argv[3])
 # xt = np.zeros(nx*nt)
 # xb = np.zeros((nx*nt, nens))
 # xa = np.zeros((nx*nt, nens))
@@ -31,7 +33,7 @@ cp = p.cycle_period
 
 ###covariance matrices
 t_ind = np.array([0])
-R = DA.R_matrix(p.nx, p.obs_ind, t_ind, p.obs_err, p.L, 0)
+R = DA.R_matrix(p.nx, p.obs_ind, t_ind, obs_err, L, 0)
 Rt = DA.R_matrix(p.nx, p.obs_ind, t_ind, 1, 5, 0)
 H = DA.H_matrix(p.nx, p.obs_ind, t_ind, 0)
 HTRinvH = np.dot(H.T, np.dot(np.linalg.inv(R), H))
@@ -56,6 +58,10 @@ Qb = misc.Q_out(prior, truth)
 Qa = misc.Q_out(post, truth)
 print('prior rmse = {}, sprd = {}'.format(misc.rmse(Qb), misc.sprd(Pb)))
 print('post rmse = {}, sprd = {}'.format(misc.rmse(Qa), misc.sprd(Pa)))
+np.save(outdir+"/RMSEb", misc.rmse(Qb))
+np.save(outdir+"/RMSEa", misc.rmse(Qa))
+np.save(outdir+"/SPRDb", misc.sprd(Pb))
+np.save(outdir+"/SPRDa", misc.sprd(Pa))
 
 ##spectrum
 Lb = misc.matrix_spec(Pb)
@@ -83,8 +89,14 @@ Lot = misc.matrix_spec(HTRtinvH) ** -1
 # ax.set_xticks(np.arange(0, nx*nt, nx))
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
+##reference from a best case:
+post = np.load("/glade/scratch/mying/L96_DA/EnKF/L5.0_s1.0/N20_F8.0/ROI25_relax0.40/ensemble_post.npy")[:, :, t1:]
+Qar = misc.Q_out(post, truth)
+Lar = misc.matrix_spec(Qar)
+
 ###plot eigenvalue spectrum
 ax = plt.subplot(111)
+ax.plot(Lar, '.7', linewidth=1)
 ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$', linewidth=2)
 ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$', linewidth=2)
 ax.plot(Lb, 'c', label=r'$\Lambda^b$', linewidth=2)
