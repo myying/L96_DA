@@ -41,19 +41,8 @@ inflation = 1.0 #np.round(float(sys.argv[7]), 2)  ##multiplicative inflation
 
 ### filter kind 1=EnKF w/ perturbed obs, 2=serial EnKF
 filter_kind = sys.argv[1]
-multiscale_kind = "" #sys.argv[8]
-dk = 10 #int(sys.argv[9])
-krange = np.arange(dk, 20, dk)
-R = DA.R_matrix(nx, obs_ind, np.array([0]), 1, 5, 0)
-Lo = misc.matrix_spec(R)
-obs_err_inf = np.ones(krange.size+1)
-obs_err_inf[0] = np.sqrt(np.mean(Lo[0:krange[0]+1]**2))
-obs_err_inf[krange.size] = np.sqrt(np.mean(Lo[krange[-1]+1:]**2))
-for i in range(1, krange.size):
-  obs_err_inf[i] = np.sqrt(np.mean(Lo[krange[i-1]+1:krange[i]+1]**2))
 
 casename = filter_kind+"/L{}_s{}".format(L, obs_err)+"/N{}_F{}".format(nens, F)+"/ROI{}".format(ROI)+"_relax{:4.2f}".format(alpha)
-#casename = filter_kind+"/"+multiscale_kind+"/dk{}".format(dk)
 print(casename)
 
 # read in initial data
@@ -94,23 +83,6 @@ for tt in range(nt-1):
       #####serial EnKF
       if filter_kind == "EnSRF":
         x1 = DA.EnKF_serial(x, x, yo, obs_err, obs_ind[:, t], ROI)
-      #####multiscale methods
-      # if filter_kind == "MS":
-      #   x1 = x.copy()
-      #   x_s = np.zeros((nx, nens))
-      #   for s in range(krange.size+1):
-      #     for k in range(nens):
-      #       x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
-      #     yo_s = misc.spec_bandpass(yo, krange, s)
-      #     obs_err = obs_err * obs_err_inf[s]
-      #     if multiscale_kind == "State":
-      #       ###opt 1: decompose state
-      #       ##state component does not iteratively update (avoid overfitting obs)
-      #       x1_s = DA.EnKF_serial(x_s, x1, yo, obs_err, obs_ind[:, t], ROI)
-      #       x1 += x1_s - x_s
-      #     if multiscale_kind == "Obs":
-      #       ###opt 2: decompose obs
-      #       x1 = DA.EnKF_serial(x1, x_s, yo_s, obs_err, obs_ind[:, t], ROI)
       dx += x1 - x
     xa = xb + dx
 
