@@ -11,10 +11,11 @@ plt.figure(figsize=(4, 3))
 
 outdir = sys.argv[1]
 t1 = 500
-truth = np.load("output/truth.npy")[:, t1:]
-prior = np.load(outdir+"/ensemble_prior.npy")[:, :, t1:]
-post = np.load(outdir+"/ensemble_post.npy")[:, :, t1:]
-obs = np.load("output/obs.npy")[:, t1:]
+t2 = 5500
+truth = np.load("output/truth.npy")[:, t1:t2]
+prior = np.load(outdir+"/ensemble_prior.npy")[:, :, t1:t2]
+post = np.load(outdir+"/ensemble_post.npy")[:, :, t1:t2]
+obs = np.load("output/obs.npy")[:, t1:t2]
 nx, nens, nt1 = prior.shape
 tt = 1
 nt = 1
@@ -90,7 +91,7 @@ Lot = misc.matrix_spec(HTRtinvH) ** -1
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
 ##reference from a best case:
-post = np.load("/glade/scratch/mying/L96_DA/EnKF/L5.0_s1.0/N20_F8.0/ROI25_relax0.40/ensemble_post.npy")[:, :, t1:]
+post = np.load("/glade/scratch/mying/L96_DA/EnKF/L5.0_s1.0/N20_F8.0/ROI25_relax0.40/ensemble_post.npy")[:, :, t1:t2]
 Qar = misc.Q_out(post, truth)
 Lar = misc.matrix_spec(Qar)
 

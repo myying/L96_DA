@@ -71,8 +71,8 @@ for tt in range(p.nt-1):
     xb_mean = np.mean(xb, axis=1)
     xa_mean = np.mean(xa, axis=1)
     for k in np.arange(p.nens):
-      xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
-      #xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
+      #xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
+      xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
 
   # forecast step
   xens1[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
