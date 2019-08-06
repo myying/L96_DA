@@ -46,7 +46,7 @@ for tt in range(p.nt-1):
         else:
           x1 = DA.EnKF(x, yo, H, R, rho)
           # x1 = DA.EnKF_perturbed_obs(x, yo, H, R, rho, tt)
-          dx = x1 - x
+        dx = x1 - x
       #####serial EnKF
       if p.filter_kind == 2:
         if p.multiscale:
@@ -56,15 +56,15 @@ for tt in range(p.nt-1):
             for k in range(p.nens):
               x_s[:, k] = misc.spec_bandpass(x1[:, k], p.krange, s)
             yo_s = misc.spec_bandpass(yo, p.krange, s)
-            obs_err = p.obs_err * p.obs_err_inf[s]
             ###opt 1: decompose state
-            # x1_s = DA.EnKF_serial(x_s, x1, yo, obs_err, p.obs_ind[:, t], p.ROI)
-            # x1 += x1_s - x_s
-            ###opt 2: decompose obs
-            x1 = DA.EnKF_serial(x1, x_s, yo_s, obs_err, p.obs_ind[:, t], p.ROI)
+            x1_s = DA.EnKF_serial(x_s, x1, yo, p.obs_err*p.obs_err_inf[s], p.obs_ind[:, t], p.ROI*p.ROI_adjust[s])
+            x1 += x1_s - x_s
+          ###opt 2: decompose obs
+          #  x1 = DA.EnKF_serial(x1, x_s, yo_s, p.obs_err*p.obs_err_inf[s], p.obs_ind[:, t], p.ROI)
+          dx = x1 - x
         else:
           x1 = DA.EnKF_serial(x, x, yo, p.obs_err, p.obs_ind[:, t], p.ROI)
-        dx = x1 - x
+          dx = x1 - x
     xa = xb + dx
 
     #####posterior inflation
@@ -72,7 +72,7 @@ for tt in range(p.nt-1):
     xa_mean = np.mean(xa, axis=1)
     for k in np.arange(p.nens):
       xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
-      # xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
+      #xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
 
   # forecast step
   xens1[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
