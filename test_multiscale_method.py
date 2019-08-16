@@ -59,8 +59,8 @@ for tt in range(p.nt-1):
             ###opt 1: decompose state
             x1_s = DA.EnKF_serial(x_s, x1, yo, p.obs_err*p.obs_err_inf[s], p.obs_ind[:, t], p.ROI*p.ROI_adjust[s])
             x1 += x1_s - x_s
-          ###opt 2: decompose obs
-          #  x1 = DA.EnKF_serial(x1, x_s, yo_s, p.obs_err*p.obs_err_inf[s], p.obs_ind[:, t], p.ROI)
+            ###opt 2: decompose obs
+            # x1 = DA.EnKF_serial(x1, x_s, yo_s, p.obs_err*p.obs_err_inf[s], p.obs_ind[:, t], p.ROI)
           dx = x1 - x
         else:
           x1 = DA.EnKF_serial(x, x, yo, p.obs_err, p.obs_ind[:, t], p.ROI)
@@ -71,8 +71,8 @@ for tt in range(p.nt-1):
     xb_mean = np.mean(xb, axis=1)
     xa_mean = np.mean(xa, axis=1)
     for k in np.arange(p.nens):
-      #xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
-      xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
+      xens1[:, k, tt] = (1-p.alpha)*(xa[:, k]-xa_mean) + p.alpha*(xb[:, k]-xb_mean) + xa_mean
+      #xens1[:, k, tt] = p.inflation*(xa[:, k]-xa_mean) + xa_mean
 
   # forecast step
   xens1[:, :, tt+1] = L96.M_nl(xens1[:, :, tt], p.nx, p.F, p.dt)
