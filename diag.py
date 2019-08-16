@@ -63,6 +63,7 @@ np.save(outdir+"/RMSEb", misc.rmse(Qb))
 np.save(outdir+"/RMSEa", misc.rmse(Qa))
 np.save(outdir+"/SPRDb", misc.sprd(Pb))
 np.save(outdir+"/SPRDa", misc.sprd(Pa))
+print('post CR = {}'.format(misc.rmse(Pa)/misc.sprd(Qa)))
 
 ##spectrum
 Lb = misc.matrix_spec(Pb)
