@@ -18,7 +18,7 @@ def EnKF_perturbed_obs(prior, yo, H, R, rho, seed):
   return post
 
 ##full matrix EnKF, deterministic version (square root filter)
-def EnKF(prior, yo, H, R, rho):
+def EnSRF(prior, yo, H, R, rho):
   nx, nens = prior.shape
   nobs = yo.size
   prior_pert = prior.copy()
@@ -43,7 +43,7 @@ def EnKF(prior, yo, H, R, rho):
   return post
 
 ##serial EnKF (square root filter), assimilates obs one at a time
-def EnKF_serial(prior, obs_prior, obs, obs_err, obs_ind, ROI):
+def EnSRF_serial(prior, obs_prior, obs, obs_err, obs_ind, ROI):
   post = prior.copy()
   obs_post = obs_prior.copy()
   nx, nens = prior.shape

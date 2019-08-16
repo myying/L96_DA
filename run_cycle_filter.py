@@ -79,32 +79,32 @@ for tt in range(nt-1):
       H = DA.H_matrix(nx, obs_ind, np.array([t]), 0)
       R = DA.R_matrix(nx, obs_ind, np.array([t]), obs_err, L, 0)
       rho = DA.local_matrix(nx, np.array([tt]), ROI, 0)
-      #####EnKF
+      ###run filter
       if filter_kind == "EnKF":
-        # x1 = DA.EnKF(x, yo, H, R, rho)
         x1 = DA.EnKF_perturbed_obs(x, yo, H, R, rho, tt)
-      #####serial EnKF
       if filter_kind == "EnSRF":
-        x1 = DA.EnKF_serial(x, x, yo, obs_err, obs_ind[:, t], ROI)
+        x1 = DA.EnSRF(x, yo, H, R, rho)
+      if filter_kind == "EnSRF_serial":
+        x1 = DA.EnSRF_serial(x, x, yo, obs_err, obs_ind[:, t], ROI)
       dx += x1 - x
-      if filter_kind == "MS_State":
-        x1 = x.copy()
-        x_s = np.zeros((nx, nens))
-        for s in range(krange.size+1):
-          for k in range(nens):
-            x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
-          x1_s = DA.EnKF_serial(x_s, x1, yo, obs_err*obs_err_inf[s], obs_ind[:, t], ROI*ROI_adjust[s])
-          x1 += x1_s -x_s
-        dx = x1 - x
-      if filter_kind == "MS_Obs":
+      if filter_kind == "MultiscaleObs":
         x1 = x.copy()
         x_s = np.zeros((nx, nens))
         for s in range(krange.size+1):
           for k in range(nens):
             x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
           yo_s = misc.spec_bandpass(yo, krange, s)
-          x1 = DA.EnKF_serial(x1, x_s, yo_s, obs_err*obs_err_inf[s], obs_ind[:, t], ROI)
+          x1 = DA.EnSRF_serial(x1, x_s, yo_s, obs_err*obs_err_inf[s], obs_ind[:, t], ROI)
         dx = x1 - x
+      # if filter_kind == "MultiscaleState":  ##does not work
+      #   x1 = x.copy()
+      #   x_s = np.zeros((nx, nens))
+      #   for s in range(krange.size+1):
+      #     for k in range(nens):
+      #       x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
+      #     x1_s = DA.EnKF_serial(x_s, x1, yo, obs_err*obs_err_inf[s], obs_ind[:, t], ROI*ROI_adjust[s])
+      #     x1 += x1_s -x_s
+      #   dx = x1 - x
     xa = xb + dx
 
     #####posterior inflation
