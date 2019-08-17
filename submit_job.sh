@@ -5,10 +5,10 @@ obs_err=$3
 N=$4
 F=$5
 ROI=$6
-alpha=$7
+inf=$7
 dk=$8
 
-outdir="/glade/scratch/mying/L96_DA/${filter_type}_dk$dk/L${L}_s${obs_err}/N${N}_F${F}/ROI${ROI}_relax$alpha"
+outdir="/glade/scratch/mying/L96_DA/${filter_type}/dk$dk/L${L}_s${obs_err}/N${N}_F${F}/ROI${ROI}_inf$inf"
 
 cat > tmp.sh << EOF
 #!/bin/bash
@@ -21,9 +21,9 @@ cat > tmp.sh << EOF
 #PBS -o log
 mkdir -p $outdir
 cd /glade/work/mying/L96_DA
-./run_cycle_filter.py $filter_type $L $obs_err $N $F $ROI $alpha $dk
-./diag.py $outdir $L $obs_err $dk
+./run_cycle_filter.py $filter_type $L $obs_err $N $F $ROI $inf $dk
+./diag_error_spec.py $outdir $L $obs_err $dk
 EOF
 
-#qsub tmp.sh
-#rm tmp.sh
+qsub tmp.sh
+rm tmp.sh

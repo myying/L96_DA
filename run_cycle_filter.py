@@ -30,22 +30,23 @@ obs_ind = np.tile(np.arange(0, nx, obs_thin), (nt, 1)).T
 filter_kind = sys.argv[1]
 nens = int(sys.argv[4])
 ROI = int(sys.argv[6])  #localization in space (grid points)
-alpha = np.round(float(sys.argv[7]), 2) #0.0  ##relaxation coef
-inflation = 1.0 #np.round(float(sys.argv[7]), 2)  ##multiplicative inflation
+alpha = 0.0 #np.round(float(sys.argv[7]), 2) #0.0  ##relaxation coef
+inflation = np.round(float(sys.argv[7]), 2)  ##multiplicative inflation
 
 #for MS algorithms
 dk = int(sys.argv[8])
-krange = np.arange(dk, 20, dk)
-R = DA.R_matrix(nx, obs_ind, np.array([0]), 1, 5, 0)
-Lo = misc.matrix_spec(R)
-obs_err_inf = np.ones(krange.size+1)
-obs_err_inf[0] = np.sqrt(np.mean(Lo[0:krange[0]+1]**2))
-obs_err_inf[krange.size] = np.sqrt(np.mean(Lo[krange[-1]+1:]**2))
-for i in range(1, krange.size):
-  obs_err_inf[i] = np.sqrt(np.mean(Lo[krange[i-1]+1:krange[i]+1]**2))
-ROI_adjust = np.ones(krange.size+1)
+if (dk < int(nx/2)) :
+  krange = np.arange(dk, int(nx/2), dk)
+  R = DA.R_matrix(nx, obs_ind, np.array([0]), 1, 5, 0)
+  Lo = misc.matrix_spec(R)
+  obs_err_inf = np.ones(krange.size+1)
+  obs_err_inf[0] = np.sqrt(np.mean(Lo[0:krange[0]+1]**2))
+  obs_err_inf[krange.size] = np.sqrt(np.mean(Lo[krange[-1]+1:]**2))
+  for i in range(1, krange.size):
+    obs_err_inf[i] = np.sqrt(np.mean(Lo[krange[i-1]+1:krange[i]+1]**2))
+  ROI_adjust = np.ones(krange.size+1)
 
-casename = filter_kind+"_dk{}".format(dk)+"/L{}_s{}".format(L, obs_err)+"/N{}_F{}".format(nens, F)+"/ROI{}".format(ROI)+"_relax{:4.2f}".format(alpha)
+casename = filter_kind+"/dk{}".format(dk)+"/L{}_s{}".format(L, obs_err)+"/N{}_F{}".format(nens, F)+"/ROI{}".format(ROI)+"_inf{:4.2f}".format(inflation)
 print(casename)
 
 # read in initial data
@@ -62,7 +63,11 @@ for tt in range(nt-1):
   # analysis step
   if(np.mod(tt, cycle_period) == 0) and tt>0:
     xb = xens1[:, :, tt].copy()
-    xa = xb
+
+    #####prior inflation
+    xb_mean = np.mean(xb, axis=1)
+    for k in np.arange(nens):
+      xb[:, k] = inflation*(xb[:, k]-xb_mean) + xb_mean
 
     ######Define obs network
     t1 = max(0, tt-time_window)
@@ -94,20 +99,11 @@ for tt in range(nt-1):
           for k in range(nens):
             x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
           yo_s = misc.spec_bandpass(yo, krange, s)
-          x1 = DA.EnSRF_serial(x1, x_s, yo_s, obs_err*obs_err_inf[s], obs_ind[:, t], ROI)
+          x1 = DA.EnSRF_serial(x1, x_s, yo_s, obs_err*obs_err_inf[s], obs_ind[:, t], ROI*ROI_adjust[s])
         dx = x1 - x
-      # if filter_kind == "MultiscaleState":  ##does not work
-      #   x1 = x.copy()
-      #   x_s = np.zeros((nx, nens))
-      #   for s in range(krange.size+1):
-      #     for k in range(nens):
-      #       x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
-      #     x1_s = DA.EnKF_serial(x_s, x1, yo, obs_err*obs_err_inf[s], obs_ind[:, t], ROI*ROI_adjust[s])
-      #     x1 += x1_s -x_s
-      #   dx = x1 - x
     xa = xb + dx
 
-    #####posterior inflation
+    #####posterior inflation/relaxation
     xb_mean = np.mean(xb, axis=1)
     xa_mean = np.mean(xa, axis=1)
     for k in np.arange(nens):

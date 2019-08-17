@@ -22,15 +22,17 @@ nt = 1
 cp = p.cycle_period
 L = float(sys.argv[2])
 obs_err = float(sys.argv[3])
-# xt = np.zeros(nx*nt)
-# xb = np.zeros((nx*nt, nens))
-# xa = np.zeros((nx*nt, nens))
-# yo = np.zeros(nx*nt)
-# for t in range(nt):
-#   xt[t*nx:(t+1)*nx] = truth[:, tt+cp*t]
-#   yo[t*nx:(t+1)*nx] = obs[:, tt+cp*t]
-#   xb[t*nx:(t+1)*nx, :] = prior[:, :, tt+cp*t]
-#   xa[t*nx:(t+1)*nx, :] = post[:, :, tt+cp*t]
+
+dk = int(sys.argv[4])
+if dk < int(nx/2) :
+  krange = np.arange(dk, int(nx/2), dk)
+  R = DA.R_matrix(nx, obs_ind, np.array([0]), 1, 5, 0)
+  Lo = misc.matrix_spec(R)
+  obs_err_inf = np.ones(krange.size+1)
+  obs_err_inf[0] = np.sqrt(np.mean(Lo[0:krange[0]+1]**2))
+  obs_err_inf[krange.size] = np.sqrt(np.mean(Lo[krange[-1]+1:]**2))
+  for i in range(1, krange.size):
+    obs_err_inf[i] = np.sqrt(np.mean(Lo[krange[i-1]+1:krange[i]+1]**2))
 
 ###covariance matrices
 t_ind = np.array([0])
@@ -92,36 +94,36 @@ Lot = misc.matrix_spec(HTRtinvH) ** -1
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
 ##reference from a best case:
-post = np.load("/glade/scratch/mying/L96_DA/EnKF/L5.0_s1.0/N20_F8.0/ROI25_relax0.40/ensemble_post.npy")[:, :, t1:t2]
-Qar = misc.Q_out(post, truth)
-Lar = misc.matrix_spec(Qar)
+# post = np.load("/glade/scratch/mying/L96_DA/EnKF/L5.0_s1.0/N20_F8.0/ROI25_relax0.40/ensemble_post.npy")[:, :, t1:t2]
+# Qar = misc.Q_out(post, truth)
+# Lar = misc.matrix_spec(Qar)
 
 ###plot eigenvalue spectrum
 ax = plt.subplot(111)
-ax.plot(Lar, '.7', linewidth=1)
+# ax.plot(Lar, '.7', linewidth=1)
 ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$', linewidth=2)
 ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$', linewidth=2)
 ax.plot(Lb, 'c', label=r'$\Lambda^b$', linewidth=2)
 ax.plot(La, 'y', label=r'$\Lambda^a$', linewidth=2)
 ax.plot(Lot, 'k', label=r'$\Lambda^{o*}$', linewidth=2)
-if p.multiscale:
-  print(p.krange)
-  print(p.obs_err_inf)
+if dk < int(nx/2) :
+  print(krange)
+  print(obs_err_inf)
   wn = np.arange(0, Lo.size)
-  ns = p.krange.size+1
+  ns = krange.size+1
   for s in range(ns):
     if s == 0:
-      ax.plot([0, p.krange[s]], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([0, krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
     if s == ns-1:
-      ax.plot([p.krange[s-1], p.nx/2-1], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([p.krange[s-1], nx/2-1], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
     if s > 0 and s < ns-1:
-      ax.plot([p.krange[s-1], p.krange[s]], p.obs_err_inf[s] * p.obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([p.krange[s-1], krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
 else:
   ax.plot(Lo, 'k:', label=r'$\Lambda^o$', linewidth=2)
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
 # ax.legend(fontsize=13, ncol=2)
 ax.set_ylim(0, 2)
-ax.set_xlim(-1, p.nx/2)
+ax.set_xlim(-1, nx/2)
 ax.tick_params(labelsize=12)
 # ax.set_xlabel('wavenumber')
 
