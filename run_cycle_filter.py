@@ -91,7 +91,6 @@ for tt in range(nt-1):
         x1 = DA.EnSRF(x, yo, H, R, rho)
       if filter_kind == "EnSRF_serial":
         x1 = DA.EnSRF_serial(x, x, yo, obs_err, obs_ind[:, t], ROI)
-      dx += x1 - x
       if filter_kind == "MultiscaleObs":
         x1 = x.copy()
         x_s = np.zeros((nx, nens))
@@ -100,7 +99,7 @@ for tt in range(nt-1):
             x_s[:, k] = misc.spec_bandpass(x1[:, k], krange, s)
           yo_s = misc.spec_bandpass(yo, krange, s)
           x1 = DA.EnSRF_serial(x1, x_s, yo_s, obs_err*obs_err_inf[s], obs_ind[:, t], ROI*ROI_adjust[s])
-        dx = x1 - x
+      dx += x1 - x
     xa = xb + dx
 
     #####posterior inflation/relaxation
