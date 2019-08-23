@@ -192,23 +192,48 @@ def SEC_func(corr, varb, varb1, nens):
   return coef
 
 ###adaptive inflation
-def adaptive_inflation(xb, ind, yo, obserr):
-  nx, nens = xb.shape
-  xb_inf = xb.copy()
-  xbmean = np.mean(xb, axis=1)
-  hxbmean = np.mean(xb[ind, :], axis=1)
-  omb = yo - hxbmean
-  varb = np.zeros(nx)
+def adaptive_prior_inflation(yo, yb, obserr):
+  ny, nens = yb.shape
+  ybmean = np.mean(yb, axis=1)
   for k in range(nens):
-    varb += (xb[ind, k] - hxbmean)**2
-  varb = varb/(nens-1)
+    yb[:, k] = yb[:, k] - ybmean
+  omb2 = np.mean((yo - ybmean)**2)
+  varb = np.mean(np.sum(yb**2, axis=1)/(nens-1))
   varo = obserr**2
-  inf_factor = np.maximum(1.0, np.sqrt((np.maximum(0.0, np.mean(omb*omb) - varo))/np.mean(varb)))
-  #print('inflation = {}'.format(inf_factor))
-  for k in range(nens):
-    xb_inf[:, k] = inf_factor*(xb[:, k] - xbmean) + xbmean
-  return xb_inf
+  if(omb2-varo < 0):
+    inflate_coef = 1.0
+  else:
+    inflate_coef = np.sqrt((omb2-varo)/varb)
+  # print('omb2=', omb2, ' varb=', varb)
+  # print('lambda=', inflate_coef)
+  return inflate_coef
 
+def adaptive_relaxation(yo, yb, ya, obserr):
+  ny, nens = yb.shape
+  ybmean = np.mean(yb, axis=1)
+  yamean = np.mean(ya, axis=1)
+  for k in range(nens):
+    yb[:, k] = yb[:, k] - ybmean
+    ya[:, k] = ya[:, k] - yamean
+  omaamb = np.mean((yo - yamean)*(yamean - ybmean))
+  varb = np.mean(np.sum(yb**2, axis=1)/(nens-1))
+  vara = np.mean(np.sum(ya**2, axis=1)/(nens-1))
+  varo = obserr**2
+  if(omaamb < 0):
+    inflate_coef = 1.0
+  else:
+    inflate_coef = np.sqrt(omaamb/vara)
+  beta = np.sqrt(varb/vara)
+  relax_coef = (inflate_coef - 1)/(beta - 1)
+  if(relax_coef>2):
+    relax_coef = 2.0
+  if(relax_coef<-1):
+    relax_coef = -1.0
+  if(beta < 1):
+    relax_coef = 0.0
+  # print('omaamb=', omaamb, ' varb=', varb, ' vara=', vara)
+  # print('alpha=', relax_coef)
+  return relax_coef
 
 ###Variational methods
 def Var4d(prior):
