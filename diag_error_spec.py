@@ -26,7 +26,7 @@ obs_err = float(sys.argv[3])
 dk = int(sys.argv[4])
 if dk < int(nx/2) :
   krange = np.arange(dk, int(nx/2), dk)
-  R = DA.R_matrix(nx, obs_ind, np.array([0]), 1, 5, 0)
+  R = DA.R_matrix(nx, p.obs_ind, np.array([0]), 1, 5, 0)
   Lo = misc.matrix_spec(R)
   obs_err_inf = np.ones(krange.size+1)
   obs_err_inf[0] = np.sqrt(np.mean(Lo[0:krange[0]+1]**2))
@@ -93,14 +93,9 @@ Lot = misc.matrix_spec(HTRtinvH) ** -1
 # ax.set_xticks(np.arange(0, nx*nt, nx))
 # ax.set_yticks(np.arange(0, nx*nt, nx))
 
-##reference from a best case:
-# post = np.load("/glade/scratch/mying/L96_DA/EnKF/L5.0_s1.0/N20_F8.0/ROI25_relax0.40/ensemble_post.npy")[:, :, t1:t2]
-# Qar = misc.Q_out(post, truth)
-# Lar = misc.matrix_spec(Qar)
 
 ###plot eigenvalue spectrum
 ax = plt.subplot(111)
-# ax.plot(Lar, '.7', linewidth=1)
 ax.plot(Lbt, 'b', label=r'$\Lambda^{b*}$', linewidth=2)
 ax.plot(Lat, 'r', label=r'$\Lambda^{a*}$', linewidth=2)
 ax.plot(Lb, 'c', label=r'$\Lambda^b$', linewidth=2)
@@ -115,11 +110,18 @@ if dk < int(nx/2) :
     if s == 0:
       ax.plot([0, krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
     if s == ns-1:
-      ax.plot([p.krange[s-1], nx/2-1], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([krange[s-1], nx/2-1], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
     if s > 0 and s < ns-1:
-      ax.plot([p.krange[s-1], krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([krange[s-1], krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
 else:
   ax.plot(Lo, 'k:', label=r'$\Lambda^o$', linewidth=2)
+
+###reference from a best case:
+post = np.load("/glade/scratch/mying/L96_DA/EnSRF/dk20/L5.0_s1.0/N40_F8.0/ROI60_inf1.04/ensemble_post.npy")[:, :, t1:t2]
+Qar = misc.Q_out(post, truth)
+Lar = misc.matrix_spec(Qar)
+ax.plot(Lar, '.7', linestyle='-', linewidth=0.8)
+
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
 # ax.legend(fontsize=13, ncol=2)
 ax.set_ylim(0, 2)
