@@ -11,14 +11,14 @@ F = 8.0
 dt = 0.2
 
 ### Cycling experiment setup
-nt = 5500
+nt = 100000
 cycle_period = 1
 time_window = 0 ##smoother analysis window (+-cycles)
 time_space_ratio = 1.0 ##ratio of dt/dx
 
 ### Observation network setup
 obs_err = 1.0
-L = 0  #spatial corr in R
+L = 5  #spatial corr in R
 Lt = 0 #temporal corr in R
 ##type of network:
 ##1. uniform
@@ -29,7 +29,7 @@ obs_ind = np.tile(np.arange(0, nx, obs_thin), (nt, 1)).T
 # obs_ind = np.random.uniform(0, nx, size=(nobs, nt))
 
 ### Ensemble filter tuning parameters
-nens = 20
+nens = 40
 ROI = 10  #localization in space (grid points)
 ROIt = 0  #localization in time (cycles)
 alpha = 0.0  ##relaxation coef

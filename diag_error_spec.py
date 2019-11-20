@@ -10,8 +10,8 @@ plt.switch_backend('Agg')
 plt.figure(figsize=(4, 3))
 
 outdir = sys.argv[1]
-t1 = 500
-t2 = 5500
+t1 = 1000
+t2 = 100000
 truth = np.load("output/truth.npy")[:, t1:t2]
 prior = np.load(outdir+"/ensemble_prior.npy")[:, :, t1:t2]
 post = np.load(outdir+"/ensemble_post.npy")[:, :, t1:t2]
@@ -108,19 +108,19 @@ if dk < int(nx/2) :
   ns = krange.size+1
   for s in range(ns):
     if s == 0:
-      ax.plot([0, krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([0, krange[s]], obs_err_inf[s] * obs_err * np.ones(2), '.7', linestyle=':', linewidth=2)
     if s == ns-1:
-      ax.plot([krange[s-1], nx/2-1], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([krange[s-1], nx/2-1], obs_err_inf[s] * obs_err * np.ones(2), '.7', linestyle=':', linewidth=2)
     if s > 0 and s < ns-1:
-      ax.plot([krange[s-1], krange[s]], obs_err_inf[s] * obs_err * np.ones(2), 'k:', linewidth=2)
+      ax.plot([krange[s-1], krange[s]-0.2], obs_err_inf[s] * obs_err * np.ones(2), '.7', linestyle=':', linewidth=2)
 else:
-  ax.plot(Lo, 'k:', label=r'$\Lambda^o$', linewidth=2)
+  ax.plot(Lo, '.7', linestyle=':', label=r'$\Lambda^o$', linewidth=2)
 
 ###reference from a best case:
-post = np.load("/glade/scratch/mying/L96_DA/EnSRF/dk20/L5.0_s1.0/N40_F8.0/ROI60_inf1.04/ensemble_post.npy")[:, :, t1:t2]
+post = np.load("/glade/scratch/mying/L96_DA/EnSRF/dk20/L5.0_s1.0/N40_F8.0/ROI55_inf1.04/ensemble_post.npy")[:, :, t1:t2]
 Qar = misc.Q_out(post, truth)
 Lar = misc.matrix_spec(Qar)
-ax.plot(Lar, '.7', linestyle='-', linewidth=0.8)
+ax.plot(Lar, 'k', linestyle=':', linewidth=1)
 
 # ax.plot(np.sqrt(np.diag(Wa1)), 'g', label=r'$(\Lambda_b^{-2}+\Lambda_o^{-2})^{-\frac{1}{2}}$')
 # ax.legend(fontsize=13, ncol=2)

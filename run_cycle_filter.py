@@ -15,7 +15,7 @@ dt = 0.2
 F = np.round(float(sys.argv[5]), 2) #8.0
 
 ### Cycling experiment setup
-nt = 5500
+nt = 100000
 cycle_period = 1
 time_window = 0 ##smoother analysis window (+-cycles)
 time_space_ratio = 1.0 ##ratio of dt/dx

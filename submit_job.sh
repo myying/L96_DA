@@ -14,7 +14,7 @@ cat > tmp.sh << EOF
 #!/bin/bash
 #PBS -A P54048000
 #PBS -N L96
-#PBS -l walltime=5:00:00
+#PBS -l walltime=8:00:00
 #PBS -l select=1:ncpus=1
 #PBS -q regular
 #PBS -j oe

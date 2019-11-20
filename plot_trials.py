@@ -8,17 +8,17 @@ plt.figure(figsize=(8, 3))
 
 outdir = "/glade/scratch/mying/L96_DA/"
 filter_kind = "EnSRF" #sys.argv[1] #"EnSRF"
-# L = 3.0 #float(sys.argv[2]) ##5.0
-# obs_err = 1.0 #float(sys.argv[3]) ##1.0
-param1 = np.array([0, 0.1, 0.2, 0.5, 0.8, 1, 2, 3, 5, 7, 8, 10])
-param2 = np.arange(0.4, 1.7, 0.2)
+L = 5.0 #float(sys.argv[2]) ##5.0
+obs_err = 1.0 #float(sys.argv[3]) ##1.0
+# param1 = np.array([0, 0.1, 0.2, 0.5, 0.8, 1, 2, 3, 5, 7, 8, 10])
+# param2 = np.arange(0.4, 1.7, 0.2)
 nens = 40 #int(sys.argv[4]) ##20
 # param1 = np.array([10, 20, 40, 80, 160])
-F = 8.0 #float(sys.argv[5]) ##8.0
-ROI = 60
-inflate = 1.04
-# param2 = np.arange(30, 61, 5)
-# param1 = np.arange(1.0, 1.21, 0.02)
+F = 7.5 #float(sys.argv[5]) ##8.0
+# ROI = 60
+# inflate = 1.04
+param2 = np.arange(5, 51, 5)
+param1 = np.arange(1.40, 1.81, 0.10)
 dk = 20
 
 RMSEa = np.zeros((param1.size, param2.size))
@@ -26,8 +26,8 @@ CRa = np.zeros((param1.size, param2.size))
 
 for i in range(param1.size):
   for j in range(param2.size):
-    casename = filter_kind+"/dk20/L{:3.1f}_s{:3.1f}".format(param1[i], param2[j])+"/N{}_F{}".format(nens, F)+"/ROI{}".format(ROI)+"_inf{:4.2f}".format(inflate)
-    # casename = filter_kind+"/dk{}".format(dk)+"/L{:3.1f}_s{:3.1f}".format(L, obs_err)+"/N{}_F{}".format(nens, F)+"/ROI{}".format(param2[j])+"_inf{:4.2f}".format(param1[i])
+    # casename = filter_kind+"/dk20/L{:3.1f}_s{:3.1f}".format(param1[i], param2[j])+"/N{}_F{}".format(nens, F)+"/ROI{}".format(ROI)+"_inf{:4.2f}".format(inflate)
+    casename = filter_kind+"/dk{}".format(dk)+"/L{:3.1f}_s{:3.1f}".format(L, obs_err)+"/N{}_F{}".format(nens, F)+"/ROI{}".format(param2[j])+"_inf{:4.2f}".format(param1[i])
 
     RMSEa[i, j] = np.load(outdir+casename+"/RMSEa.npy")
     CRa[i, j] = np.load(outdir+casename+"/SPRDa.npy") / np.load(outdir+casename+"/RMSEa.npy")
