@@ -6,11 +6,11 @@ from scipy.fftpack import fft
 plt.switch_backend('Agg')
 
 nx = 40
-nens = 10
+nens = 1000
 ii, jj = np.mgrid[0:nx, 0:nx]
 dist = np.sqrt((ii - jj)**2)
 dist = np.minimum(dist, nx - dist)
-xens = np.random.multivariate_normal(np.zeros(nx), np.exp(-dist/1), nens).T
+xens = np.random.multivariate_normal(np.zeros(nx), np.exp(-dist/10), nens).T
 xp = np.zeros((nx, nens))
 xm = np.mean(xens, axis=1)
 for m in range(nens):
